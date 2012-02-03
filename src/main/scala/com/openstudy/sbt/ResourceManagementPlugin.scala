@@ -4,7 +4,7 @@ package com.openstudy { package sbt {
   import _root_.sbt._
 
   import org.mozilla.javascript.{ErrorReporter, EvaluatorException}
-  import com.yahoo.platform.yui.compressor.JavaScriptCompressor
+  import com.yahoo.platform.yui.compressor._
 
 
   // The result of a CoffeeScript compile.
@@ -18,7 +18,7 @@ package com.openstudy { package sbt {
 
     private val result = process.waitFor
 
-    val failed_? = result > 0
+    val failed_? = result != 0
 
     val error =
       if (failed_?)
@@ -109,8 +109,6 @@ package com.openstudy { package sbt {
                 scala.io.Source.fromFile(new File(("src" / "main" / "webapp" / "javascripts").absolutePath + "/" + file)).mkString("")
               }).mkString(";\n")
 
-              println(bundle)
-              println(contentsToCompress)
             val compressor =
               new JavaScriptCompressor(
                 new StringReader(contentsToCompress),
@@ -143,10 +141,60 @@ package com.openstudy { package sbt {
     lazy val compileSass = task {
       log.info("Compiling SASS files...")
 
-      None
+      val runtime = Runtime.getRuntime
+      val process = runtime.exec(("compass" :: "compile" :: Nil).toArray)
+      val result = process.waitFor
+
+      if (result != 0)
+        Some("SASS compilation failed. Errors: " + scala.io.Source.fromInputStream(process.getErrorStream).mkString(""))
+      else
+        None
     }
     lazy val compressCss = task {
       log.info("Compressing CSS...")
+
+      // Find bundles.
+      val path = ("src" / "main" / "resources" / "bundles" / "stylesheet.bundle")
+
+      if (path.exists) {
+        try {
+          val bundles = Map[String,List[String]]() ++
+            scala.io.Source.fromFile(path.asFile).mkString("").split("\n\n").flatMap { section =>
+              val lines = section.split("\n").toList
+
+              if (lines.length >= 1)
+                Some(lines(0) -> lines.drop(1))
+              else {
+                log.warn("Found a bundle with no name/content.")
+                None
+              }
+            }
+
+          for {
+            (bundle, files) <- bundles
+          } {
+            val contentsToCompress =
+              (for (file <- files) yield {
+                scala.io.Source.fromFile(new File(("src" / "main" / "webapp" / "stylesheets").absolutePath + "/" + file)).mkString("")
+              }).mkString(";\n")
+
+            val compressor =
+              new CssCompressor(new StringReader(contentsToCompress))
+
+            FileUtilities.createDirectory("target" / "compressed" / "stylesheets", log)
+            val writer = new BufferedWriter(new FileWriter(("target" / "compressed" / "stylesheets").absolutePath + "/" + bundle + ".css"))
+            compressor.compress(writer, defaultCompressionOptions.lineBreakPos)
+          }
+
+          None
+        } catch {
+          case exception =>
+            Some(exception.getMessage + "\n" + exception.getStackTrace.map(_.toString).mkString("\n"))
+        }
+      } else {
+        log.warn("Couldn't find " + path.absolutePath + "; not generating any bundles.")
+        None
+      }
 
       None
     } dependsOn(compileSass)
