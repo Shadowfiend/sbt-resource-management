@@ -30,7 +30,7 @@ package com.openstudy { package sbt {
     implicit def path2CsCompileResult(path:Path) = new CsCompileResult(path)
   }
 
-  trait ResourceManagementPlugin extends BasicScalaProject { self:BasicScalaProject =>
+  trait ResourceManagementPlugin extends BasicScalaProject with S3Handler { self:BasicScalaProject =>
     /**
      * Handles all JS errors by throwing an exception. This can then get caught
      * and turned into a Failure. in the masher.
@@ -60,8 +60,14 @@ package com.openstudy { package sbt {
       preserveSemicolons:Boolean, disableOptimizations:Boolean)
     val defaultCompressionOptions = JSCompressionOptions("utf-8", -1, true, false, false, false)
 
-    // Override this to set the proper run mode.
-    def runMode = "development"
+    // Override this to set the proper AWS credentials.
+    def awsAccessKey : Property[String]
+    def accessKey = awsAccessKey.value
+    def awsSecretKey : Property[String]
+    def secretKey = awsSecretKey.value
+    // Override this to set the proper S3 bucket for asset upload.
+    def awsS3Bucket : Property[String]
+    def bucket = awsS3Bucket.value
 
     def coffeeScriptSources : Iterable[Path] = (("src" / "main" / "webapp" / "coffee-script-hidden" ##) ** "*.coffee").get
     def coffeeScriptResults : Iterable[Path] = coffeeScriptSources.map { source =>
@@ -132,12 +138,6 @@ package com.openstudy { package sbt {
         None
       }
     } dependsOn(compileCoffeeScript)
-    lazy val deployScripts = task {
-      log.info("Deploying scripts to " + ""/* s3Bucket */ + "...")
-
-      None
-    } dependsOn(compressScripts)
-
     lazy val compileSass = task {
       log.info("Compiling SASS files...")
 
@@ -198,10 +198,65 @@ package com.openstudy { package sbt {
 
       None
     } dependsOn(compileSass)
-    lazy val deployCss = task {
-      log.info("Deploying CSS to " + ""/* s3Bucket */ + "...")
 
-      None
+    lazy val deployScripts = task {
+      log.info("Deploying scripts to " + bucket + "...")
+
+      val scripts = ("target" / "compressed" ##) / "javascripts"
+      val results:List[String] =
+        (for {
+          path <- (scripts ** "*.js").get
+          relativePath = path.relativePath
+          file = path.asFile
+        } yield {
+          try {
+            val contents = FileUtilities.readBytes(file, log) match {
+              case Left(error) =>
+                throw new Exception(error)
+              case Right(contents) =>
+                saveFile("text/javascript", relativePath, contents)
+            }
+
+            List[String]()
+          } catch {
+            case e =>
+              log.error("Failed to upload " + file)
+
+              List(e.getMessage + "\n" + e.getStackTrace.mkString("\n"))
+          }
+        }).toList.flatten
+
+      results.firstOption
+    } dependsOn(compressScripts)
+
+    lazy val deployCss = task {
+      log.info("Deploying CSS to " + bucket + "...")
+
+      val scripts = ("target" / "compressed" ##) / "stylesheets"
+      val results:List[String] =
+        (for {
+          path <- (scripts ** "*.css").get
+          relativePath = path.relativePath
+          file = path.asFile
+        } yield {
+          try {
+            val contents = FileUtilities.readBytes(file, log) match {
+              case Left(error) =>
+                throw new Exception(error)
+              case Right(contents) =>
+                saveFile("text/css", relativePath, contents)
+            }
+
+            List[String]()
+          } catch {
+            case e =>
+              log.error("Failed to upload " + file)
+
+              List(e.getMessage + "\n" + e.getStackTrace.mkString("\n"))
+          }
+        }).toList.flatten
+
+      results.firstOption
     } dependsOn(compressCss)
 
     lazy val compressResources = task { None } dependsOn(compressScripts, compressCss)
