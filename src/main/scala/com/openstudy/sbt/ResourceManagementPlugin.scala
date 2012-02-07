@@ -112,14 +112,11 @@ package com.openstudy { package sbt {
           for {
             (bundle, files) <- bundles
           } {
-            var latestModification = 0l
-
             val contentsToCompress =
               (for {
                 filename <- files
                 file = new File(("src" / "main" / "webapp" / "javascripts").absolutePath + "/" + filename)
               } yield {
-                latestModification = Math.max(latestModification, file.lastModified)
                 scala.io.Source.fromFile(file).mkString("")
               }).mkString(";\n")
 
@@ -134,9 +131,6 @@ package com.openstudy { package sbt {
               defaultCompressionOptions.lineBreakPos, defaultCompressionOptions.munge,
               defaultCompressionOptions.verbose, defaultCompressionOptions.preserveSemicolons,
               defaultCompressionOptions.disableOptimizations)
-
-            if (latestModification > 0)
-              FileUtilities.append(bundleVersions.asFile, bundle + "=" + latestModification, log)
           }
 
           None
@@ -181,19 +175,14 @@ package com.openstudy { package sbt {
               }
             }
 
-          val bundleVersions = "src" / "main" / "resources" / "bundles" / "stylesheet-bundle-versions"
-          FileUtilities.write(bundleVersions.asFile, "", log)
           for {
             (bundle, files) <- bundles
           } {
-            var latestModification = 0l
-
             val contentsToCompress =
               (for {
                 filename <- files
                 file = new File(("src" / "main" / "webapp" / "stylesheets").absolutePath + "/" + filename)
               } yield {
-                latestModification = Math.max(latestModification, file.lastModified)
                 scala.io.Source.fromFile(file).mkString("")
               }).mkString(";\n")
 
@@ -203,9 +192,6 @@ package com.openstudy { package sbt {
             FileUtilities.createDirectory("target" / "compressed" / "stylesheets", log)
             val writer = new BufferedWriter(new FileWriter(("target" / "compressed" / "stylesheets").absolutePath + "/" + bundle + ".css"))
             compressor.compress(writer, defaultCompressionOptions.lineBreakPos)
-
-            if (latestModification > 0)
-              FileUtilities.append(bundleVersions.asFile, bundle + "=" + latestModification, log)
           }
 
           None
@@ -224,20 +210,26 @@ package com.openstudy { package sbt {
     lazy val deployScripts = task {
       log.info("Deploying scripts to " + bucket + "...")
 
+      val bundleVersions = "src" / "main" / "resources" / "bundles" / "javascript-bundle-versions"
+      FileUtilities.write(bundleVersions.asFile, "", log)
+
       val scripts = ("target" / "compressed" ##) / "javascripts"
       val results:List[String] =
         (for {
           path <- (scripts ** "*.js").get
+          bundle = path.base
           relativePath = path.relativePath
           file = path.asFile
         } yield {
           try {
-            val contents = FileUtilities.readBytes(file, log) match {
+            val checksum = FileUtilities.readBytes(file, log) match {
               case Left(error) =>
                 throw new Exception(error)
               case Right(contents) =>
                 saveFile("text/javascript", relativePath, contents)
             }
+
+            FileUtilities.append(bundleVersions.asFile, bundle + "=" + checksum, log)
 
             List[String]()
           } catch {
@@ -254,20 +246,26 @@ package com.openstudy { package sbt {
     lazy val deployCss = task {
       log.info("Deploying CSS to " + bucket + "...")
 
+      val bundleVersions = "src" / "main" / "resources" / "bundles" / "stylesheet-bundle-versions"
+      FileUtilities.write(bundleVersions.asFile, "", log)
+
       val scripts = ("target" / "compressed" ##) / "stylesheets"
       val results:List[String] =
         (for {
           path <- (scripts ** "*.css").get
+          bundle = path.base
           relativePath = path.relativePath
           file = path.asFile
         } yield {
           try {
-            val contents = FileUtilities.readBytes(file, log) match {
+            val checksum = FileUtilities.readBytes(file, log) match {
               case Left(error) =>
                 throw new Exception(error)
               case Right(contents) =>
                 saveFile("text/css", relativePath, contents)
             }
+
+            FileUtilities.append(bundleVersions.asFile, bundle + "=" + checksum, log)
 
             List[String]()
           } catch {

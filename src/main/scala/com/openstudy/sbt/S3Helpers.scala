@@ -26,12 +26,17 @@ package com.openstudy { package sbt {
       acl
     }
 
-    def saveFile(mime:String, fileName:String, data:Array[Byte]) = {
+    // Returns the MD5 checksum of the file.
+    def saveFile(mime:String, fileName:String, data:Array[Byte]) : String = {
       val s3Object = new S3Object(fileName, data)
+      val hash = s3Object.getMd5HashAsHex
+
       s3Object.setContentType(mime)
       s3Object.setAcl(bucketAcl)
 
       s3.putObject(bucket, s3Object)
+
+      hash
     }
   }
 } }
