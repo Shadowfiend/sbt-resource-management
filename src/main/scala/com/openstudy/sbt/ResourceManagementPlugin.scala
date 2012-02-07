@@ -126,11 +126,14 @@ package com.openstudy { package sbt {
                 new ExceptionErrorReporter(bundle))
 
             FileUtilities.createDirectory("target" / "compressed" / "javascripts", log)
-            val writer = new BufferedWriter(new FileWriter(("target" / "compressed" / "javascripts").absolutePath + "/" + bundle + ".js"))
-            compressor.compress(writer,
-              defaultCompressionOptions.lineBreakPos, defaultCompressionOptions.munge,
-              defaultCompressionOptions.verbose, defaultCompressionOptions.preserveSemicolons,
-              defaultCompressionOptions.disableOptimizations)
+            FileUtilities.write(("target" / "compressed" / "javascripts" / (bundle + ".js")).asFile, log) { writer =>
+              compressor.compress(writer,
+                defaultCompressionOptions.lineBreakPos, defaultCompressionOptions.munge,
+                defaultCompressionOptions.verbose, defaultCompressionOptions.preserveSemicolons,
+                defaultCompressionOptions.disableOptimizations)
+
+              None
+            }
           }
 
           None
@@ -190,8 +193,11 @@ package com.openstudy { package sbt {
               new CssCompressor(new StringReader(contentsToCompress))
 
             FileUtilities.createDirectory("target" / "compressed" / "stylesheets", log)
-            val writer = new BufferedWriter(new FileWriter(("target" / "compressed" / "stylesheets").absolutePath + "/" + bundle + ".css"))
-            compressor.compress(writer, defaultCompressionOptions.lineBreakPos)
+            FileUtilities.write(("target" / "compressed" / "stylesheets" / (bundle + ".css")).asFile, log) { writer =>
+              compressor.compress(writer, defaultCompressionOptions.lineBreakPos)
+
+              None
+            }
           }
 
           None
