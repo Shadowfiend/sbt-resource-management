@@ -107,12 +107,20 @@ package com.openstudy { package sbt {
               }
             }
 
+          val bundleVersions = "src" / "main" / "resources" / "bundles" / "javascript-bundle-versions"
+          FileUtilities.write(bundleVersions.asFile, "", log)
           for {
             (bundle, files) <- bundles
           } {
+            var latestModification = 0l
+
             val contentsToCompress =
-              (for (file <- files) yield {
-                scala.io.Source.fromFile(new File(("src" / "main" / "webapp" / "javascripts").absolutePath + "/" + file)).mkString("")
+              (for {
+                filename <- files
+                file = new File(("src" / "main" / "webapp" / "javascripts").absolutePath + "/" + filename)
+              } yield {
+                latestModification = Math.max(latestModification, file.lastModified)
+                scala.io.Source.fromFile(file).mkString("")
               }).mkString(";\n")
 
             val compressor =
@@ -126,6 +134,9 @@ package com.openstudy { package sbt {
               defaultCompressionOptions.lineBreakPos, defaultCompressionOptions.munge,
               defaultCompressionOptions.verbose, defaultCompressionOptions.preserveSemicolons,
               defaultCompressionOptions.disableOptimizations)
+
+            if (latestModification > 0)
+              FileUtilities.append(bundleVersions.asFile, bundle + "=" + latestModification, log)
           }
 
           None
@@ -170,12 +181,20 @@ package com.openstudy { package sbt {
               }
             }
 
+          val bundleVersions = "src" / "main" / "resources" / "bundles" / "stylesheet-bundle-versions"
+          FileUtilities.write(bundleVersions.asFile, "", log)
           for {
             (bundle, files) <- bundles
           } {
+            var latestModification = 0l
+
             val contentsToCompress =
-              (for (file <- files) yield {
-                scala.io.Source.fromFile(new File(("src" / "main" / "webapp" / "stylesheets").absolutePath + "/" + file)).mkString("")
+              (for {
+                filename <- files
+                file = new File(("src" / "main" / "webapp" / "stylesheets").absolutePath + "/" + filename)
+              } yield {
+                latestModification = Math.max(latestModification, file.lastModified)
+                scala.io.Source.fromFile(file).mkString("")
               }).mkString(";\n")
 
             val compressor =
@@ -184,6 +203,9 @@ package com.openstudy { package sbt {
             FileUtilities.createDirectory("target" / "compressed" / "stylesheets", log)
             val writer = new BufferedWriter(new FileWriter(("target" / "compressed" / "stylesheets").absolutePath + "/" + bundle + ".css"))
             compressor.compress(writer, defaultCompressionOptions.lineBreakPos)
+
+            if (latestModification > 0)
+              FileUtilities.append(bundleVersions.asFile, bundle + "=" + latestModification, log)
           }
 
           None
