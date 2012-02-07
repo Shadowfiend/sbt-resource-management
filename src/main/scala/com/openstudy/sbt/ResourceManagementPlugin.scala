@@ -184,7 +184,7 @@ package com.openstudy { package sbt {
                 file = new File(("src" / "main" / "webapp" / "stylesheets").absolutePath + "/" + filename)
               } yield {
                 scala.io.Source.fromFile(file).mkString("")
-              }).mkString(";\n")
+              }).mkString("")
 
             val compressor =
               new CssCompressor(new StringReader(contentsToCompress))
