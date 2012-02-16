@@ -150,11 +150,14 @@ package com.openstudy { package sbt {
       log.info("Compiling SASS files...")
 
       val runtime = Runtime.getRuntime
-      val process = runtime.exec(("compass" :: "compile" :: Nil).toArray)
+      val process =
+        runtime.exec(
+          ("compass" :: "compile" :: "-e" :: "production" :: "--force" :: Nil).toArray,
+          ("asset_domain=" + awsS3Bucket :: Nil).toArray)
       val result = process.waitFor
 
       if (result != 0)
-        Some("SASS compilation failed. Errors: " + scala.io.Source.fromInputStream(process.getErrorStream).mkString(""))
+        Some("SASS compilation failed with code " + result + ". Errors: " + scala.io.Source.fromInputStream(process.getErrorStream).mkString(""))
       else
         None
     }
