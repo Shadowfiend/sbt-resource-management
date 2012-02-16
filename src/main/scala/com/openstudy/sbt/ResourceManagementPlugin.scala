@@ -139,7 +139,7 @@ package com.openstudy { package sbt {
           None
         } catch {
           case exception =>
-            Some(exception.getMessage + "\n" + exception.getStackTrace.map(_.toString).mkString("\n"))
+            Some(exception.toString + "\n" + exception.getStackTrace.map(_.toString).mkString("\n"))
         }
       } else {
         log.warn("Couldn't find " + path.absolutePath + "; not generating any bundles.")
