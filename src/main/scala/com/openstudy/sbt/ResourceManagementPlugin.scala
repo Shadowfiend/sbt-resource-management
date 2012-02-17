@@ -1,5 +1,6 @@
 package com.openstudy { package sbt {
   import java.io._
+  import java.nio.charset.Charset
 
   import _root_.sbt._
 
@@ -129,7 +130,7 @@ package com.openstudy { package sbt {
                 new ExceptionErrorReporter(bundle))
 
             FileUtilities.createDirectory("target" / "compressed" / "javascripts", log)
-            FileUtilities.write(("target" / "compressed" / "javascripts" / (bundle + ".js")).asFile, log) { writer =>
+            FileUtilities.write(("target" / "compressed" / "javascripts" / (bundle + ".js")).asFile, Charset.forName("UTF-8"), log) { writer =>
               compressor.compress(writer,
                 defaultCompressionOptions.lineBreakPos, defaultCompressionOptions.munge,
                 defaultCompressionOptions.verbose, defaultCompressionOptions.preserveSemicolons,
@@ -203,7 +204,7 @@ package com.openstudy { package sbt {
               new CssCompressor(new StringReader(contentsToCompress))
 
             FileUtilities.createDirectory("target" / "compressed" / "stylesheets", log)
-            FileUtilities.write(("target" / "compressed" / "stylesheets" / (bundle + ".css")).asFile, log) { writer =>
+            FileUtilities.write(("target" / "compressed" / "stylesheets" / (bundle + ".css")).asFile, Charset.forName("UTF-8"), log) { writer =>
               compressor.compress(writer, defaultCompressionOptions.lineBreakPos)
 
               None
