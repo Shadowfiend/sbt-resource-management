@@ -78,9 +78,12 @@ package com.openstudy { package sbt {
       // If any are found, run coffee on them and deposit the results in
       // target/.
 
-      val failures = coffeeScriptSources.map { path =>
+      val sources = coffeeScriptSources.toList
+      log.info("  Found " + sources.length + " CoffeeScript files.")
+
+      val failures = sources.map { path =>
         new CsCompileResult(path)
-      }.partition(_.failed_?)._1.map(_.error).toList
+      }.partition(_.failed_?)._1.map(_.error)
 
       if (failures.length > 0)
         Some("CoffeeScript compilation failed. Errors:\n" + failures.mkString("\n\n"))
@@ -88,8 +91,6 @@ package com.openstudy { package sbt {
         None
     }
     lazy val compressScripts = task {
-      log.info("Compressing scripts...")
-
       // Find bundles.
       val path = ("src" / "main" / "resources" / "bundles" / "javascript.bundle")
 
@@ -109,9 +110,11 @@ package com.openstudy { package sbt {
 
           val bundleVersions = "src" / "main" / "resources" / "bundles" / "javascript-bundle-versions"
           FileUtilities.write(bundleVersions.asFile, "", log)
+          log.info("  Found " + bundles.size + " bundles.")
           for {
             (bundle, files) <- bundles
           } {
+            log.info("    Bundling " + files.length + " files into bundle " + bundle + "...")
             val contentsToCompress =
               (for {
                 filename <- files
@@ -158,8 +161,10 @@ package com.openstudy { package sbt {
 
       if (result != 0)
         Some("SASS compilation failed with code " + result + ". Errors: " + scala.io.Source.fromInputStream(process.getErrorStream).mkString(""))
-      else
+      else {
+        log.info("Done.")
         None
+      }
     }
     lazy val compressCss = task {
       log.info("Compressing CSS...")
@@ -184,6 +189,8 @@ package com.openstudy { package sbt {
           for {
             (bundle, files) <- bundles
           } {
+            log.info("    Bundling " + files.length + " files into bundle " + bundle + "...")
+
             val contentsToCompress =
               (for {
                 filename <- files
@@ -230,6 +237,8 @@ package com.openstudy { package sbt {
           relativePath = path.relativePath
           file = path.asFile
         } yield {
+          log.info("  Deploying bundle " + bundle + " as " + relativePath + "...")
+
           try {
             val checksum = FileUtilities.readBytes(file, log) match {
               case Left(error) =>
@@ -266,6 +275,8 @@ package com.openstudy { package sbt {
           relativePath = path.relativePath
           file = path.asFile
         } yield {
+          log.info("  Deploying bundle " + bundle + " as " + relativePath + "...")
+
           try {
             val checksum = FileUtilities.readBytes(file, log) match {
               case Left(error) =>
