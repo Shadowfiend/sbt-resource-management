@@ -93,14 +93,14 @@ package com.openstudy { package sbt {
       }.partition(_.failed_?)._1.map(_.error)
     }
 
-    def doSassCompile(streams:TaskStreams) = {
+    def doSassCompile(streams:TaskStreams, bucket:String) = {
       streams.log.info("Compiling SASS files...")
 
       val runtime = java.lang.Runtime.getRuntime
       val process =
         runtime.exec(
           ("compass" :: "compile" :: "-e" :: "production" :: "--force" :: Nil).toArray,
-          ("asset_domain=" + awsS3Bucket :: Nil).toArray)
+          ("asset_domain=" + bucket :: Nil).toArray)
       val result = process.waitFor
 
       if (result != 0)
@@ -217,7 +217,7 @@ package com.openstudy { package sbt {
       styleDirectories in ResourceCompile <<= (webappResources in Compile) map { resources => (resources * "stylesheets").get },
       coffeeScriptSources in ResourceCompile <<= (webappResources in Compile) map { resources => (resources ** "*.coffee").get },
       compileCoffeeScript in ResourceCompile <<= (streams, baseDirectory, webappResources in Compile, coffeeScriptSources in ResourceCompile) map doCoffeeScriptCompile _,
-      compileSass in ResourceCompile := streams map doSassCompile _,
+      compileSass in ResourceCompile <<= (streams, awsS3Bucket) map doSassCompile _,
       compressScripts in ResourceCompile <<= (streams, compileCoffeeScript in ResourceCompile, scriptDirectories in ResourceCompile, compressedTarget in ResourceCompile, scriptBundle in ResourceCompile) map doScriptCompress _,
       compressCss in ResourceCompile <<= (streams, compileSass in ResourceCompile, styleDirectories in ResourceCompile, compressedTarget in ResourceCompile, styleBundle in ResourceCompile) map doCssCompress _,
       deployScripts in ResourceCompile <<= (streams, compressScripts in ResourceCompile, scriptBundleVersions in ResourceCompile, compressedTarget in ResourceCompile, awsAccessKey, awsSecretKey, awsS3Bucket) map doScriptDeploy _,
