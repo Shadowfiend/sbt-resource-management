@@ -16,9 +16,7 @@ package com.openstudy { package sbt {
       new AWSCredentials(accessKey, secretKey)
     lazy val s3 = new RestS3Service(credentials)
   }
-  trait S3Handler extends S3 {
-    def bucket : String
-
+  class S3Handler(val accessKey:String, val secretKey:String, bucket:String) extends S3 {
     lazy val bucketAcl = {
       val acl = s3.getBucketAcl(bucket);
       acl.grantPermission(GroupGrantee.ALL_USERS, Permission.PERMISSION_READ);
