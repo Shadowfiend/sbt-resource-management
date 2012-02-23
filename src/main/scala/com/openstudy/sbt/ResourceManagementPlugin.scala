@@ -10,8 +10,6 @@ package com.openstudy { package sbt {
 
 
   object ResourceManagementPlugin extends Plugin {
-    type TaskStreams = std.TaskStreams[Project.ScopedKey[_]]
-
     // The result of a CoffeeScript compile.
     class CsCompileResult(pathToCs:String, pathToJs:String) {
       private val runtime = java.lang.Runtime.getRuntime
