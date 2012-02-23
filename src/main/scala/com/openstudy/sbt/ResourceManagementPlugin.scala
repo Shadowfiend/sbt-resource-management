@@ -134,7 +134,7 @@ package com.openstudy { package sbt {
             val contentsToCompress =
               (for {
                 filename <- files
-                file <- (sourceDirectories * filename).get
+                file <- (filename.split("/").foldLeft(sourceDirectories:PathFinder)(_ * _)).get
               } yield {
                 scala.io.Source.fromFile(file).mkString("")
               })
