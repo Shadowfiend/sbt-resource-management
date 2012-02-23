@@ -125,6 +125,7 @@ package com.openstudy { package sbt {
               }
             }
 
+          IO.delete(compressedTarget)
           streams.log.info("  Found " + bundles.size + " bundles.")
           for {
             (bundle, files) <- bundles
@@ -138,7 +139,7 @@ package com.openstudy { package sbt {
                 scala.io.Source.fromFile(file).mkString("")
               })
 
-            IO.createDirectory(compressedTarget / "javascripts")
+            IO.createDirectory(compressedTarget)
             IO.writer(compressedTarget / (bundle + "." + extension), "", Charset.forName("UTF-8"), false) { writer =>
               compressor(contentsToCompress, writer, new ExceptionErrorReporter(streams, bundle))
             }
