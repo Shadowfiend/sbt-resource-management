@@ -190,7 +190,7 @@ package com.openstudy { package sbt {
           val contents = IO.readBytes(file) 
           val checksum = handler.saveFile(mimeType, relativePath, contents)
 
-          IO.append(bundleVersions, bundle + "=" + checksum)
+          IO.append(bundleVersions, bundle + "=" + checksum + "\n")
         } catch {
           case e =>
             streams.log.error("Failed to upload " + file)
