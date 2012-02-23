@@ -114,7 +114,7 @@ package com.openstudy { package sbt {
       if (bundle.exists) {
         try {
           val bundles = Map[String,List[String]]() ++
-            scala.io.Source.fromFile(bundle).mkString("").split("\n\n").flatMap { section =>
+            IO.read(bundle, Charset.forName("UTF-8")).split("\n\n").flatMap { section =>
               val lines = section.split("\n").toList
 
               if (lines.length >= 1)
@@ -136,7 +136,7 @@ package com.openstudy { package sbt {
                 filename <- files
                 file <- (filename.split("/").foldLeft(sourceDirectories:PathFinder)(_ * _)).get
               } yield {
-                scala.io.Source.fromFile(file).mkString("")
+                IO.read(file, Charset.forName("UTF-8"))
               })
 
             IO.createDirectory(compressedTarget)
