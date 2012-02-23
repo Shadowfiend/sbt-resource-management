@@ -175,14 +175,14 @@ package com.openstudy { package sbt {
       })
     }
 
-    def doDeploy(streams:TaskStreams, bundleVersions:File, compressedTarget:File, mimeType:String, access:String, secret:String, bucket:String) = {
+    def doDeploy(streams:TaskStreams, bundleVersions:File, baseCompressedTarget:File, files:Seq[File], mimeType:String, access:String, secret:String, bucket:String) = {
       val handler = new S3Handler(access, secret, bucket)
 
       IO.write(bundleVersions.asFile, "")
       for {
-        file <- (compressedTarget ** "*.js").get
+        file <- files
         bundle = file.base
-        relativePath <- IO.relativize(compressedTarget / "..", file)
+        relativePath <- IO.relativize(baseCompressedTarget, file)
       } yield {
         streams.log.info("  Deploying bundle " + bundle + " as " + relativePath + "...")
 
@@ -200,10 +200,10 @@ package com.openstudy { package sbt {
       }
     }
     def doScriptDeploy(streams:TaskStreams, compressScripts:Unit, scriptBundleVersions:File, compressedTarget:File, access:String, secret:String, bucket:String) = {
-      doDeploy(streams, scriptBundleVersions, compressedTarget / "javascripts", "text/javascript", access, secret, bucket)
+      doDeploy(streams, scriptBundleVersions, compressedTarget, (compressedTarget / "javascripts" ** "*.js").get, "text/javascript", access, secret, bucket)
     }
     def doCssDeploy(streams:TaskStreams, compressStyles:Unit, styleBundleVersions:File, compressedTarget:File, access:String, secret:String, bucket:String) = {
-      doDeploy(streams, styleBundleVersions, compressedTarget / "stylesheets", "text/css", access, secret, bucket)
+      doDeploy(streams, styleBundleVersions, compressedTarget, (compressedTarget / "stylesheets" ** "*.css").get, "text/css", access, secret, bucket)
     }
 
     val resourceManagementSettings = Seq(
