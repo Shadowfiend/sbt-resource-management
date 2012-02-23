@@ -110,7 +110,7 @@ package com.openstudy { package sbt {
       }
     }
 
-    def doCompress(streams:TaskStreams, sourceDirectories:Seq[File], compressedTarget:File, bundle:File, compressor:(Seq[String],BufferedWriter,ExceptionErrorReporter)=>Unit) = {
+    def doCompress(streams:TaskStreams, sourceDirectories:Seq[File], compressedTarget:File, bundle:File, extension:String, compressor:(Seq[String],BufferedWriter,ExceptionErrorReporter)=>Unit) = {
       if (bundle.exists) {
         try {
           val bundles = Map[String,List[String]]() ++
@@ -139,7 +139,7 @@ package com.openstudy { package sbt {
               })
 
             IO.createDirectory(compressedTarget / "javascripts")
-            IO.writer(compressedTarget / "javascripts" / (bundle + ".js"), "", Charset.forName("UTF-8"), false) { writer =>
+            IO.writer(compressedTarget / (bundle + "." + extension), "", Charset.forName("UTF-8"), false) { writer =>
               compressor(contentsToCompress, writer, new ExceptionErrorReporter(streams, bundle))
             }
           }
@@ -153,7 +153,7 @@ package com.openstudy { package sbt {
     }
 
     def doScriptCompress(streams:TaskStreams, compileCoffeeScript:Unit, scriptDirectories:Seq[File], compressedTarget:File, scriptBundle:File) = {
-      doCompress(streams, scriptDirectories, compressedTarget / "javascripts", scriptBundle, { (fileContents, writer, reporter) =>
+      doCompress(streams, scriptDirectories, compressedTarget / "javascripts", scriptBundle, "js", { (fileContents, writer, reporter) =>
         val compressor =
           new JavaScriptCompressor(
             new StringReader(fileContents.mkString(";\n")),
@@ -166,7 +166,7 @@ package com.openstudy { package sbt {
       })
     }
     def doCssCompress(streams:TaskStreams, compileSass:Unit, styleDirectories:Seq[File], compressedTarget:File, styleBundle:File) = {
-      doCompress(streams, styleDirectories, compressedTarget / "stylesheets", styleBundle, { (fileContents, writer, reporter) =>
+      doCompress(streams, styleDirectories, compressedTarget / "stylesheets", styleBundle, "css", { (fileContents, writer, reporter) =>
         val compressor =
           new CssCompressor(new StringReader(fileContents.mkString("")))
 
