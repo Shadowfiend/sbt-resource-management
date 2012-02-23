@@ -206,25 +206,25 @@ package com.openstudy { package sbt {
     }
 
     val resourceManagementSettings = Seq(
-      bundleDirectory in ResourceCompile <<= resourceDirectory(_ / "bundles"),
-      scriptBundle in ResourceCompile <<= bundleDirectory(_ / "javascript.bundle"),
-      styleBundle in ResourceCompile <<= bundleDirectory(_ / "stylesheet.bundle"),
-      scriptBundleVersions in ResourceCompile <<= bundleDirectory(_ / "javascript-bundle-versions"),
-      styleBundleVersions in ResourceCompile <<= bundleDirectory(_ / "stylesheet-bundle-versions"),
+      bundleDirectory in ResourceCompile <<= (resourceDirectory in Compile)(_ / "bundles"),
+      scriptBundle in ResourceCompile <<= (bundleDirectory in ResourceCompile)(_ / "javascript.bundle"),
+      styleBundle in ResourceCompile <<= (bundleDirectory in ResourceCompile)(_ / "stylesheet.bundle"),
+      scriptBundleVersions in ResourceCompile <<= (bundleDirectory in ResourceCompile)(_ / "javascript-bundle-versions"),
+      styleBundleVersions in ResourceCompile <<= (bundleDirectory in ResourceCompile)(_ / "stylesheet-bundle-versions"),
       compressedTarget in ResourceCompile <<= target(_ / "compressed"),
 
-      scriptDirectories in ResourceCompile <<= webappResources map { resources => (resources * "javascripts").get },
-      styleDirectories in ResourceCompile <<= webappResources map { resources => (resources * "stylesheets").get },
-      coffeeScriptSources in ResourceCompile <<= webappResources map { resources => (resources ** "*.coffee").get },
-      compileCoffeeScript in ResourceCompile <<= (streams, baseDirectory, webappResources, coffeeScriptSources) map doCoffeeScriptCompile _,
+      scriptDirectories in ResourceCompile <<= (webappResources in Compile) map { resources => (resources * "javascripts").get },
+      styleDirectories in ResourceCompile <<= (webappResources in Compile) map { resources => (resources * "stylesheets").get },
+      coffeeScriptSources in ResourceCompile <<= (webappResources in Compile) map { resources => (resources ** "*.coffee").get },
+      compileCoffeeScript in ResourceCompile <<= (streams, baseDirectory, webappResources in Compile, coffeeScriptSources in ResourceCompile) map doCoffeeScriptCompile _,
       compileSass in ResourceCompile := streams map doSassCompile _,
-      compressScripts in ResourceCompile <<= (streams, compileCoffeeScript, scriptDirectories, compressedTarget, scriptBundle) map doScriptCompress _,
-      compressCss in ResourceCompile <<= (streams, compileSass, styleDirectories, compressedTarget, styleBundle) map doCssCompress _,
-      deployScripts in ResourceCompile <<= (streams, compressScripts, scriptBundleVersions, compressedTarget, awsAccessKey, awsSecretKey, awsS3Bucket) map doScriptDeploy _,
-      deployCss in ResourceCompile <<= (streams, compressCss, styleBundleVersions, compressedTarget, awsAccessKey, awsSecretKey, awsS3Bucket) map doCssDeploy _,
+      compressScripts in ResourceCompile <<= (streams, compileCoffeeScript in ResourceCompile, scriptDirectories in ResourceCompile, compressedTarget in ResourceCompile, scriptBundle in ResourceCompile) map doScriptCompress _,
+      compressCss in ResourceCompile <<= (streams, compileSass in ResourceCompile, styleDirectories in ResourceCompile, compressedTarget in ResourceCompile, styleBundle in ResourceCompile) map doCssCompress _,
+      deployScripts in ResourceCompile <<= (streams, compressScripts in ResourceCompile, scriptBundleVersions in ResourceCompile, compressedTarget in ResourceCompile, awsAccessKey, awsSecretKey, awsS3Bucket) map doScriptDeploy _,
+      deployCss in ResourceCompile <<= (streams, compressCss in ResourceCompile, styleBundleVersions in ResourceCompile, compressedTarget in ResourceCompile, awsAccessKey, awsSecretKey, awsS3Bucket) map doCssDeploy _,
 
-      compressResources in ResourceCompile <<= (compressScripts, compressCss) map { (thing, other) => },
-      deployResources in ResourceCompile <<= (deployScripts, deployCss) map { (_, _) => }
+      compressResources in ResourceCompile <<= (compressScripts in ResourceCompile, compressCss in ResourceCompile) map { (thing, other) => },
+      deployResources in ResourceCompile <<= (deployScripts in ResourceCompile, deployCss in ResourceCompile) map { (_, _) => }
     )
   }
 } }
