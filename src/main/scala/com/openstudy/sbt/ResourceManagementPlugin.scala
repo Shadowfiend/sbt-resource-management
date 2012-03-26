@@ -83,6 +83,7 @@ package com.openstudy { package sbt {
     val deployCss = TaskKey[Unit]("deploy-styles")
     val compressResources = TaskKey[Unit]("deploy-resources")
     val deployResources = TaskKey[Unit]("deploy-resources")
+    val mashScripts = TaskKey[Unit]("mash-scripts")
 
     def doCoffeeScriptCompile(streams:TaskStreams, baseDirectory:File, webappResources:Seq[File], csSources:Seq[File]) = {
       val chosenDirectory = webappResources.head
@@ -166,6 +167,13 @@ package com.openstudy { package sbt {
           defaultCompressionOptions.disableOptimizations)
       })
     }
+    def doScriptMash(streams:TaskStreams, compileCoffeeScript:Unit, scriptDirectories:Seq[File], compressedTarget:File, scriptBundle:File) = {
+      doCompress(streams, scriptDirectories, compressedTarget / "javascripts", scriptBundle, "js", { (fileContents, writer, reporter) =>
+        val mashedScript = fileContents.mkString(";\n")
+
+        writer.write(mashedScript, 0, mashedScript.length)
+      })
+    }
     def doCssCompress(streams:TaskStreams, compileSass:Unit, styleDirectories:Seq[File], compressedTarget:File, styleBundle:File) = {
       doCompress(streams, styleDirectories, compressedTarget / "stylesheets", styleBundle, "css", { (fileContents, writer, reporter) =>
         val compressor =
@@ -225,7 +233,9 @@ package com.openstudy { package sbt {
       deployCss in ResourceCompile <<= (streams, compressCss in ResourceCompile, styleBundleVersions in ResourceCompile, compressedTarget in ResourceCompile, awsAccessKey, awsSecretKey, awsS3Bucket) map doCssDeploy _,
 
       compressResources in ResourceCompile <<= (compressScripts in ResourceCompile, compressCss in ResourceCompile) map { (thing, other) => },
-      deployResources in ResourceCompile <<= (deployScripts in ResourceCompile, deployCss in ResourceCompile) map { (_, _) => }
+      deployResources in ResourceCompile <<= (deployScripts in ResourceCompile, deployCss in ResourceCompile) map { (_, _) => },
+
+      mashScripts in ResourceCompile <<= (streams, compileCoffeeScript in ResourceCompile, scriptDirectories in ResourceCompile, compressedTarget in ResourceCompile, scriptBundle in ResourceCompile) map doScriptMash _
     )
   }
 } }
