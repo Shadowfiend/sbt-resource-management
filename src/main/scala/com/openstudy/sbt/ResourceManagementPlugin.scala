@@ -90,7 +90,7 @@ package com.openstudy { package sbt {
       val failures = csSources.map { file =>
         new CsCompileResult(
           IO.relativize(baseDirectory, file).get,
-          IO.relativize(baseDirectory, chosenDirectory / "javascripts" / (file.base + ".js")).get)
+          IO.relativize(baseDirectory, chosenDirectory / "javascripts").get)
       }.partition(_.failed_?)._1.map(_.error)
     }
 
