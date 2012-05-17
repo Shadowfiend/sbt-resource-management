@@ -76,6 +76,7 @@ package com.openstudy { package sbt {
     val styleDirectories = TaskKey[Seq[File]]("stylesheets-directories")
     val coffeeScriptSources = TaskKey[Seq[File]]("coffee-script-sources")
     val compileCoffeeScript = TaskKey[Unit]("compile-coffee-script")
+    val cleanCoffeeScript = TaskKey[Unit]("clean-coffee-script")
     val compileSass = TaskKey[Unit]("compile-sass")
     val compressScripts = TaskKey[Unit]("compress-scripts")
     val compressCss = TaskKey[Unit]("compress-styles")
@@ -116,6 +117,16 @@ package com.openstudy { package sbt {
           streams.log.error(failures.mkString("\n"))
           throw new RuntimeException("CoffeeScript compilation failed.")
         }
+      }
+    }
+
+    def doCoffeeScriptClean(streams:TaskStreams, baseDiretory:File, webappResources:Seq[File], csSources:Seq[File]) = {
+      val chosenDirectory = webappResources.head / "javascripts"
+
+      streams.log.info("Cleaning " + csSources.length + " generated JavaScript files.")
+
+      val outdatedPaths = csSources.foreach { source =>
+        (chosenDirectory / (source.base + ".js")).delete
       }
     }
 
@@ -253,6 +264,7 @@ package com.openstudy { package sbt {
       scriptDirectories in ResourceCompile <<= (webappResources in Compile) map { resources => (resources * "javascripts").get },
       styleDirectories in ResourceCompile <<= (webappResources in Compile) map { resources => (resources * "stylesheets").get },
       coffeeScriptSources in ResourceCompile <<= (webappResources in Compile) map { resources => (resources ** "*.coffee").get },
+      cleanCoffeeScript in ResourceCompile <<= (streams, baseDirectory, webappResources in Compile, coffeeScriptSources in ResourceCompile) map doCoffeeScriptClean _,
       compileCoffeeScript in ResourceCompile <<= (streams, baseDirectory, webappResources in Compile, coffeeScriptSources in ResourceCompile) map doCoffeeScriptCompile _,
       compileSass in ResourceCompile <<= (streams, awsS3Bucket) map doSassCompile _,
       compressScripts in ResourceCompile <<= (streams, compileCoffeeScript in ResourceCompile, scriptDirectories in ResourceCompile, compressedTarget in ResourceCompile, scriptBundle in ResourceCompile) map doScriptCompress _,
