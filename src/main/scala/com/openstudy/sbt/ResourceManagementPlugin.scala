@@ -86,11 +86,17 @@ package com.openstudy { package sbt {
     val mashScripts = TaskKey[Unit]("mash-scripts")
 
     def doCoffeeScriptCompile(streams:TaskStreams, baseDirectory:File, webappResources:Seq[File], csSources:Seq[File]) = {
-      val chosenDirectory = webappResources.head
+      val chosenDirectory = webappResources.head / "javascripts"
+
+      streams.log.info(
+        "Compiling " + csSources.length + " CoffeeScript sources to " +
+        chosenDirectory + "..."
+      )
+
       val failures = csSources.map { file =>
         new CsCompileResult(
           IO.relativize(baseDirectory, file).get,
-          IO.relativize(baseDirectory, chosenDirectory / "javascripts").get)
+          IO.relativize(baseDirectory, chosenDirectory).get)
       }.partition(_.failed_?)._1.map(_.error)
 
       if (failures.length != 0) {
