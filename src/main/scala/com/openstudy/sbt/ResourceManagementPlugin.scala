@@ -85,23 +85,37 @@ package com.openstudy { package sbt {
     val deployResources = TaskKey[Unit]("deploy-resources")
     val mashScripts = TaskKey[Unit]("mash-scripts")
 
+    case class PathInformation(source:String, target:String)
     def doCoffeeScriptCompile(streams:TaskStreams, baseDirectory:File, webappResources:Seq[File], csSources:Seq[File]) = {
       val chosenDirectory = webappResources.head / "javascripts"
 
-      streams.log.info(
-        "Compiling " + csSources.length + " CoffeeScript sources to " +
-        chosenDirectory + "..."
-      )
+      def outdated_?(source:File) = {
+        val target = chosenDirectory / (source.base + ".js")
 
-      val failures = csSources.map { file =>
-        new CsCompileResult(
-          IO.relativize(baseDirectory, file).get,
-          IO.relativize(baseDirectory, chosenDirectory).get)
-      }.partition(_.failed_?)._1.map(_.error)
+        source.lastModified() > target.lastModified()
+      }
+      val outdatedPaths = csSources.collect {
+        case file if outdated_?(file) =>
+          PathInformation(
+            IO.relativize(baseDirectory, file).get,
+            IO.relativize(baseDirectory, chosenDirectory).get
+          )
+      }
 
-      if (failures.length != 0) {
-        streams.log.error(failures.mkString("\n"))
-        throw new RuntimeException("CoffeeScript compilation failed.")
+      if (outdatedPaths.length > 0) {
+        streams.log.info(
+          "Compiling " + outdatedPaths.length + " CoffeeScript sources to " +
+          chosenDirectory + "..."
+        )
+
+        val failures = outdatedPaths.collect {
+          case PathInformation(source, target) => new CsCompileResult(source, target)
+        }.partition(_.failed_?)._1.map(_.error)
+
+        if (failures.length != 0) {
+          streams.log.error(failures.mkString("\n"))
+          throw new RuntimeException("CoffeeScript compilation failed.")
+        }
       }
     }
 
