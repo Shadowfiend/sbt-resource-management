@@ -92,6 +92,11 @@ package com.openstudy { package sbt {
           IO.relativize(baseDirectory, file).get,
           IO.relativize(baseDirectory, chosenDirectory / "javascripts").get)
       }.partition(_.failed_?)._1.map(_.error)
+
+      if (failures.length != 0) {
+        streams.log.error(failures.mkString("\n"))
+        throw new RuntimeException("CoffeeScript compilation failed.")
+      }
     }
 
     def doSassCompile(streams:TaskStreams, bucket:String) = {
@@ -104,9 +109,11 @@ package com.openstudy { package sbt {
           ("asset_domain=" + bucket :: Nil).toArray)
       val result = process.waitFor
 
-      if (result != 0)
-        streams.log.error("SASS compilation failed with code " + result + ". Errors: " + scala.io.Source.fromInputStream(process.getErrorStream).mkString(""))
-      else {
+      if (result != 0) {
+        streams.log.error(
+          scala.io.Source.fromInputStream(process.getErrorStream).mkString(""))
+        throw new RuntimeException("SASS compilation failed with code " + result + ".")
+      } else {
         streams.log.info("Done.")
       }
     }
@@ -148,6 +155,8 @@ package com.openstudy { package sbt {
         } catch {
           case exception =>
             streams.log.error(exception.toString + "\n" + exception.getStackTrace.map(_.toString).mkString("\n"))
+
+            throw new RuntimeException("Compression failed.")
         }
       } else {
         streams.log.warn("Couldn't find " + bundle.absolutePath + "; not generating any bundles.")
@@ -201,9 +210,8 @@ package com.openstudy { package sbt {
           IO.append(bundleVersions, bundle + "=" + checksum + "\n")
         } catch {
           case e =>
-            streams.log.error("Failed to upload " + file)
-
             streams.log.error(e.getMessage + "\n" + e.getStackTrace.mkString("\n"))
+            throw new RuntimeException("Failed to upload " + file)
         }
       }
     }
