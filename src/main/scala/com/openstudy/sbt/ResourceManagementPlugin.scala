@@ -24,7 +24,7 @@ package com.openstudy { package sbt {
 
       val error =
         if (failed_?)
-          "CoffeeScript compilation failed. Errors: " + scala.io.Source.fromInputStream(process.getErrorStream).mkString("")
+          scala.io.Source.fromInputStream(process.getErrorStream).mkString("")
         else
           ""
     }
