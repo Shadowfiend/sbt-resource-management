@@ -132,10 +132,12 @@ package com.openstudy { package sbt {
     def doScriptCopy(streams:TaskStreams, coffeeScriptCompile:Unit, compiledCsDir:File, scriptDirectories:Seq[File], targetJSDir:File) = {
       def copyPathsForDirectory(directory:File) = {
         for {
-          file <- (directory ** "*.*").get
-          relativeComponents = IO.relativize(directory, file).get.split("/")
+          source <- (directory ** "*.*").get
+          relativeComponents = IO.relativize(directory, source).get.split("/")
+          target = relativeComponents.foldLeft(targetJSDir)(_ / _):File
+            if source.lastModified() > target.lastModified()
         } yield {
-          (file, relativeComponents.foldLeft(targetJSDir)(_ / _):File)
+          (source, target)
         }
       }
 
