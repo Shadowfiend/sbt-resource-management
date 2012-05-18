@@ -146,7 +146,7 @@ package com.openstudy { package sbt {
       val scriptCopyPaths =
         scriptDirectories.foldLeft(List[(File,File)]())(_ ++ copyPathsForDirectory(_))
       streams.log.info("Copying " + scriptCopyPaths.length + " JavaScript files...")
-      IO.copy(csCopyPaths, true)
+      IO.copy(scriptCopyPaths, true)
     }
 
     def doSassCompile(streams:TaskStreams, bucket:String) = {
