@@ -65,6 +65,7 @@ package com.openstudy { package sbt {
     val awsAccessKey = SettingKey[String]("aws-access-key")
     val awsSecretKey = SettingKey[String]("aws-secret-key")
     val awsS3Bucket = SettingKey[String]("aws-s3-bucket")
+    val compiledCoffeeScriptDirectory = SettingKey[File]("compiled-coffee-script-directory")
     val bundleDirectory = SettingKey[File]("bundle-directory")
     val scriptBundle = SettingKey[File]("javascript-bundle")
     val styleBundle = SettingKey[File]("stylesheet-bundle")
@@ -86,12 +87,18 @@ package com.openstudy { package sbt {
     val deployResources = TaskKey[Unit]("deploy-resources")
     val mashScripts = TaskKey[Unit]("mash-scripts")
 
-    case class PathInformation(source:String, target:String)
-    def doCoffeeScriptCompile(streams:TaskStreams, baseDirectory:File, webappResources:Seq[File], csSources:Seq[File]) = {
-      val chosenDirectory = webappResources.head / "javascripts"
+    def doCoffeeScriptClean(streams:TaskStreams, baseDiretory:File, compiledCsDir:File, csSources:Seq[File]) = {
+      streams.log.info("Cleaning " + csSources.length + " generated JavaScript files.")
 
+      val outdatedPaths = csSources.foreach { source =>
+        (compiledCsDir / (source.base + ".js")).delete
+      }
+    }
+
+    case class PathInformation(source:String, target:String)
+    def doCoffeeScriptCompile(streams:TaskStreams, baseDirectory:File, compiledCsDir:File, csSources:Seq[File]) = {
       def outdated_?(source:File) = {
-        val target = chosenDirectory / (source.base + ".js")
+        val target = compiledCsDir / (source.base + ".js")
 
         source.lastModified() > target.lastModified()
       }
@@ -99,14 +106,14 @@ package com.openstudy { package sbt {
         case file if outdated_?(file) =>
           PathInformation(
             IO.relativize(baseDirectory, file).get,
-            IO.relativize(baseDirectory, chosenDirectory).get
+            IO.relativize(baseDirectory, compiledCsDir).get
           )
       }
 
       if (outdatedPaths.length > 0) {
         streams.log.info(
           "Compiling " + outdatedPaths.length + " CoffeeScript sources to " +
-          chosenDirectory + "..."
+          compiledCsDir + "..."
         )
 
         val failures = outdatedPaths.collect {
@@ -120,15 +127,6 @@ package com.openstudy { package sbt {
       }
     }
 
-    def doCoffeeScriptClean(streams:TaskStreams, baseDiretory:File, webappResources:Seq[File], csSources:Seq[File]) = {
-      val chosenDirectory = webappResources.head / "javascripts"
-
-      streams.log.info("Cleaning " + csSources.length + " generated JavaScript files.")
-
-      val outdatedPaths = csSources.foreach { source =>
-        (chosenDirectory / (source.base + ".js")).delete
-      }
-    }
 
     def doSassCompile(streams:TaskStreams, bucket:String) = {
       streams.log.info("Compiling SASS files...")
@@ -259,13 +257,14 @@ package com.openstudy { package sbt {
       styleBundle in ResourceCompile <<= (bundleDirectory in ResourceCompile)(_ / "stylesheet.bundle"),
       scriptBundleVersions in ResourceCompile <<= (bundleDirectory in ResourceCompile)(_ / "javascript-bundle-versions"),
       styleBundleVersions in ResourceCompile <<= (bundleDirectory in ResourceCompile)(_ / "stylesheet-bundle-versions"),
+      compiledCoffeeScriptDirectory in ResourceCompile <<= target(_ / "compiled-coffee-script"),
       compressedTarget in ResourceCompile <<= target(_ / "compressed"),
 
       scriptDirectories in ResourceCompile <<= (webappResources in Compile) map { resources => (resources * "javascripts").get },
       styleDirectories in ResourceCompile <<= (webappResources in Compile) map { resources => (resources * "stylesheets").get },
       coffeeScriptSources in ResourceCompile <<= (webappResources in Compile) map { resources => (resources ** "*.coffee").get },
-      cleanCoffeeScript in ResourceCompile <<= (streams, baseDirectory, webappResources in Compile, coffeeScriptSources in ResourceCompile) map doCoffeeScriptClean _,
-      compileCoffeeScript in ResourceCompile <<= (streams, baseDirectory, webappResources in Compile, coffeeScriptSources in ResourceCompile) map doCoffeeScriptCompile _,
+      cleanCoffeeScript in ResourceCompile <<= (streams, baseDirectory, compiledCoffeeScriptDirectory in ResourceCompile, coffeeScriptSources in ResourceCompile) map doCoffeeScriptClean _,
+      compileCoffeeScript in ResourceCompile <<= (streams, baseDirectory, compiledCoffeeScriptDirectory in ResourceCompile, coffeeScriptSources in ResourceCompile) map doCoffeeScriptCompile _,
       compileSass in ResourceCompile <<= (streams, awsS3Bucket) map doSassCompile _,
       compressScripts in ResourceCompile <<= (streams, compileCoffeeScript in ResourceCompile, scriptDirectories in ResourceCompile, compressedTarget in ResourceCompile, scriptBundle in ResourceCompile) map doScriptCompress _,
       compressCss in ResourceCompile <<= (streams, compileSass in ResourceCompile, styleDirectories in ResourceCompile, compressedTarget in ResourceCompile, styleBundle in ResourceCompile) map doCssCompress _,
