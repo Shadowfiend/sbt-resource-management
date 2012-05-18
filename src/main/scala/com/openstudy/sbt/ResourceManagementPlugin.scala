@@ -66,6 +66,7 @@ package com.openstudy { package sbt {
     val awsSecretKey = SettingKey[String]("aws-secret-key")
     val awsS3Bucket = SettingKey[String]("aws-s3-bucket")
     val compiledCoffeeScriptDirectory = SettingKey[File]("compiled-coffee-script-directory")
+    val targetJavaScriptDirectory = SettingKey[File]("target-java-script-directory")
     val bundleDirectory = SettingKey[File]("bundle-directory")
     val scriptBundle = SettingKey[File]("javascript-bundle")
     val styleBundle = SettingKey[File]("stylesheet-bundle")
@@ -76,8 +77,9 @@ package com.openstudy { package sbt {
     val scriptDirectories = TaskKey[Seq[File]]("javascripts-directories")
     val styleDirectories = TaskKey[Seq[File]]("stylesheets-directories")
     val coffeeScriptSources = TaskKey[Seq[File]]("coffee-script-sources")
-    val compileCoffeeScript = TaskKey[Unit]("compile-coffee-script")
     val cleanCoffeeScript = TaskKey[Unit]("clean-coffee-script")
+    val compileCoffeeScript = TaskKey[Unit]("compile-coffee-script")
+    val copyScripts = TaskKey[Unit]("copy-scripts")
     val compileSass = TaskKey[Unit]("compile-sass")
     val compressScripts = TaskKey[Unit]("compress-scripts")
     val compressCss = TaskKey[Unit]("compress-styles")
@@ -127,6 +129,25 @@ package com.openstudy { package sbt {
       }
     }
 
+    def doScriptCopy(streams:TaskStreams, coffeeScriptCompile:Unit, compiledCsDir:File, scriptDirectories:Seq[File], targetJSDir:File) = {
+      def copyPathsForDirectory(directory:File) = {
+        for {
+          file <- (directory ** "*.*").get
+          relativeComponents = IO.relativize(directory, file).get.split("/")
+        } yield {
+          (file, relativeComponents.foldLeft(targetJSDir)(_ / _):File)
+        }
+      }
+
+      val csCopyPaths = copyPathsForDirectory(compiledCsDir)
+      streams.log.info("Copying " + csCopyPaths.length + " compiled CoffeeScript files...")
+      IO.copy(csCopyPaths, true)
+
+      val scriptCopyPaths =
+        scriptDirectories.foldLeft(List[(File,File)]())(_ ++ copyPathsForDirectory(_))
+      streams.log.info("Copying " + scriptCopyPaths.length + " JavaScript files...")
+      IO.copy(csCopyPaths, true)
+    }
 
     def doSassCompile(streams:TaskStreams, bucket:String) = {
       streams.log.info("Compiling SASS files...")
@@ -192,7 +213,7 @@ package com.openstudy { package sbt {
       }
     }
 
-    def doScriptCompress(streams:TaskStreams, compileCoffeeScript:Unit, scriptDirectories:Seq[File], compressedTarget:File, scriptBundle:File) = {
+    def doScriptCompress(streams:TaskStreams, copyScripts:Unit, scriptDirectories:Seq[File], compressedTarget:File, scriptBundle:File) = {
       doCompress(streams, scriptDirectories, compressedTarget / "javascripts", scriptBundle, "js", { (fileContents, writer, reporter) =>
         val compressor =
           new JavaScriptCompressor(
@@ -258,6 +279,7 @@ package com.openstudy { package sbt {
       scriptBundleVersions in ResourceCompile <<= (bundleDirectory in ResourceCompile)(_ / "javascript-bundle-versions"),
       styleBundleVersions in ResourceCompile <<= (bundleDirectory in ResourceCompile)(_ / "stylesheet-bundle-versions"),
       compiledCoffeeScriptDirectory in ResourceCompile <<= target(_ / "compiled-coffee-script"),
+      targetJavaScriptDirectory in ResourceCompile <<= target(_ / "javascripts"),
       compressedTarget in ResourceCompile <<= target(_ / "compressed"),
 
       scriptDirectories in ResourceCompile <<= (webappResources in Compile) map { resources => (resources * "javascripts").get },
@@ -265,8 +287,9 @@ package com.openstudy { package sbt {
       coffeeScriptSources in ResourceCompile <<= (webappResources in Compile) map { resources => (resources ** "*.coffee").get },
       cleanCoffeeScript in ResourceCompile <<= (streams, baseDirectory, compiledCoffeeScriptDirectory in ResourceCompile, coffeeScriptSources in ResourceCompile) map doCoffeeScriptClean _,
       compileCoffeeScript in ResourceCompile <<= (streams, baseDirectory, compiledCoffeeScriptDirectory in ResourceCompile, coffeeScriptSources in ResourceCompile) map doCoffeeScriptCompile _,
+      copyScripts in ResourceCompile <<= (streams, compileCoffeeScript in ResourceCompile, compiledCoffeeScriptDirectory in ResourceCompile, scriptDirectories in ResourceCompile, targetJavaScriptDirectory in ResourceCompile) map doScriptCopy _,
       compileSass in ResourceCompile <<= (streams, awsS3Bucket) map doSassCompile _,
-      compressScripts in ResourceCompile <<= (streams, compileCoffeeScript in ResourceCompile, scriptDirectories in ResourceCompile, compressedTarget in ResourceCompile, scriptBundle in ResourceCompile) map doScriptCompress _,
+      compressScripts in ResourceCompile <<= (streams, copyScripts in ResourceCompile, scriptDirectories in ResourceCompile, compressedTarget in ResourceCompile, scriptBundle in ResourceCompile) map doScriptCompress _,
       compressCss in ResourceCompile <<= (streams, compileSass in ResourceCompile, styleDirectories in ResourceCompile, compressedTarget in ResourceCompile, styleBundle in ResourceCompile) map doCssCompress _,
       deployScripts in ResourceCompile <<= (streams, compressScripts in ResourceCompile, scriptBundleVersions in ResourceCompile, compressedTarget in ResourceCompile, awsAccessKey, awsSecretKey, awsS3Bucket) map doScriptDeploy _,
       deployCss in ResourceCompile <<= (streams, compressCss in ResourceCompile, styleBundleVersions in ResourceCompile, compressedTarget in ResourceCompile, awsAccessKey, awsSecretKey, awsS3Bucket) map doCssDeploy _,
