@@ -215,8 +215,8 @@ package com.openstudy { package sbt {
       }
     }
 
-    def doScriptCompress(streams:TaskStreams, copyScripts:Unit, scriptDirectories:Seq[File], compressedTarget:File, scriptBundle:File) = {
-      doCompress(streams, scriptDirectories, compressedTarget / "javascripts", scriptBundle, "js", { (fileContents, writer, reporter) =>
+    def doScriptCompress(streams:TaskStreams, copyScripts:Unit, targetJsDirectory:File, compressedTarget:File, scriptBundle:File) = {
+      doCompress(streams, List(targetJsDirectory), compressedTarget / "javascripts", scriptBundle, "js", { (fileContents, writer, reporter) =>
         val compressor =
           new JavaScriptCompressor(
             new StringReader(fileContents.mkString(";\n")),
@@ -291,7 +291,7 @@ package com.openstudy { package sbt {
       compileCoffeeScript in ResourceCompile <<= (streams, baseDirectory, compiledCoffeeScriptDirectory in ResourceCompile, coffeeScriptSources in ResourceCompile) map doCoffeeScriptCompile _,
       copyScripts in ResourceCompile <<= (streams, compileCoffeeScript in ResourceCompile, compiledCoffeeScriptDirectory in ResourceCompile, scriptDirectories in ResourceCompile, targetJavaScriptDirectory in ResourceCompile) map doScriptCopy _,
       compileSass in ResourceCompile <<= (streams, awsS3Bucket) map doSassCompile _,
-      compressScripts in ResourceCompile <<= (streams, copyScripts in ResourceCompile, scriptDirectories in ResourceCompile, compressedTarget in ResourceCompile, scriptBundle in ResourceCompile) map doScriptCompress _,
+      compressScripts in ResourceCompile <<= (streams, copyScripts in ResourceCompile, targetJavaScriptDirectory in ResourceCompile, compressedTarget in ResourceCompile, scriptBundle in ResourceCompile) map doScriptCompress _,
       compressCss in ResourceCompile <<= (streams, compileSass in ResourceCompile, styleDirectories in ResourceCompile, compressedTarget in ResourceCompile, styleBundle in ResourceCompile) map doCssCompress _,
       deployScripts in ResourceCompile <<= (streams, compressScripts in ResourceCompile, scriptBundleVersions in ResourceCompile, compressedTarget in ResourceCompile, awsAccessKey, awsSecretKey, awsS3Bucket) map doScriptDeploy _,
       deployCss in ResourceCompile <<= (streams, compressCss in ResourceCompile, styleBundleVersions in ResourceCompile, compressedTarget in ResourceCompile, awsAccessKey, awsSecretKey, awsS3Bucket) map doCssDeploy _,
