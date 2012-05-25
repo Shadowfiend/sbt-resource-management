@@ -195,5 +195,6 @@ I am the Director of Engineering at [OpenStudy](http://openstudy.com),
 where we're working on changing the face of education as we know it
 using Scala, Lift, and a variety of other cool tools.
 
-Also contains contributions from Matt Farmer, @farmdawgnation, one of the
-stupidly smart developers at OpenStudy.
+Also contains contributions from Matt Farmer,
+@[farmdawgnation](http://github.com/farmdawgnation), one of the stupidly
+smart developers at OpenStudy.
