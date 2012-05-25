@@ -138,7 +138,31 @@ target directory from above. Note that `compress-scripts` first runs
 There is a combination command, `resources:compress-resources`, that
 runs both the compression commands.
 
-You can "mash" the scripts, meaning create the joined bundle files
+When sbt-resource-management compresses your resources, it also drops
+2 files in the resources directory alongside the javascript.bundle and
+stylesheet.bundle files. These files describe the "versions" of the
+resulting bundles. By default, they are in the bundles directory at
+`javascript-bundle-versions` (`scriptBundleVersions in ResourceCompile`)
+and `stylesheet-bundle-versions`
+(`styleBundleVersions in ResourceCompile`). An example of a
+javascript-bundle-versions file from OpenStudy:
+
+    base-libs=eb973464460455b7b3369d2423cbce28
+    feed=52f1ad2c66be23b554dfc46a987040e7
+    group=1f8a721879bbfdd24f23e455a6b67bf5
+    hi-im-ie8-and-i-dont-have-a-proper-ecma-implementation-but-ten-percent-of-our-users-still-use-me=ec4fa5b263f0aa8c2a1b3d0cc1bd40eb
+    jquery-address=1d3f939fe75ebe1e8975f1728c0925ee
+    landing=477cfa71fab9c9c36833b4af0b362688
+    loading=cda37f6b044678b545f227cece6055fb
+    profile=2a9097d76cb16b8875bd5b15f14eddb3
+    search-landing=c6fe1030bb5a2fff52d90744627e19d8
+    settings=f2854751746eae5b427ff929c6652544
+    single-pane=10a20a17c6b0862baca031cff63c2765
+
+The versions here are MD5 hashes, and can be used to append a
+cache-buster querystring to your script and link tags.
+
+You can also "mash" the scripts, meaning create the joined bundle files
 without YUI compression, by running `sbt resources:mash-scripts`.
 
 ## Deployment to S3
@@ -176,6 +200,17 @@ in your bundle files by name:
       <lift:script-bundle name="group" />
       <lift:script-bundle name="loading" />
     </tail>
+
+Notably, the bundles snippet above will include the expanded, unbundled
+files in development mode, and only try to include the bundled files in
+production mode. When the bundled files are included, the version files
+from the above bundling step are used to append the proper cache-buster
+querystring to the script and link tags. When the non-bundled files are
+included, Lift's internal attachResourceId is used to attach the
+cache-busting querystring. attacheResourceId by default attaches a
+different unique id every time the server is run, but uses the same one
+within the same server run. You can change that by replacing
+LiftRules.attachResourceId.
 
 # License
 
