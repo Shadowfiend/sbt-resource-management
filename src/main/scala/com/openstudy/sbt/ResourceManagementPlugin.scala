@@ -228,8 +228,8 @@ package com.openstudy { package sbt {
           defaultCompressionOptions.disableOptimizations)
       })
     }
-    def doScriptMash(streams:TaskStreams, compileCoffeeScript:Unit, scriptDirectories:Seq[File], compressedTarget:File, scriptBundle:File) = {
-      doCompress(streams, scriptDirectories, compressedTarget / "javascripts", scriptBundle, "js", { (fileContents, writer, reporter) =>
+    def doScriptMash(streams:TaskStreams, copyScripts:Unit, targetJsDirectory:File, compressedTarget:File, scriptBundle:File) = {
+      doCompress(streams, List(targetJsDirectory), compressedTarget / "javascripts", scriptBundle, "js", { (fileContents, writer, reporter) =>
         val mashedScript = fileContents.mkString(";\n")
 
         writer.write(mashedScript, 0, mashedScript.length)
@@ -299,7 +299,7 @@ package com.openstudy { package sbt {
       compressResources in ResourceCompile <<= (compressScripts in ResourceCompile, compressCss in ResourceCompile) map { (thing, other) => },
       deployResources in ResourceCompile <<= (deployScripts in ResourceCompile, deployCss in ResourceCompile) map { (_, _) => },
 
-      mashScripts in ResourceCompile <<= (streams, compileCoffeeScript in ResourceCompile, scriptDirectories in ResourceCompile, compressedTarget in ResourceCompile, scriptBundle in ResourceCompile) map doScriptMash _,
+      mashScripts in ResourceCompile <<= (streams, copyScripts in ResourceCompile, targetJavaScriptDirectory in ResourceCompile, compressedTarget in ResourceCompile, scriptBundle in ResourceCompile) map doScriptMash _,
       watchSources <++= (coffeeScriptSources in ResourceCompile)
     )
   }
