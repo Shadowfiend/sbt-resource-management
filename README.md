@@ -147,6 +147,7 @@ and `stylesheet-bundle-versions`
 (`styleBundleVersions in ResourceCompile`). An example of a
 javascript-bundle-versions file from OpenStudy:
 
+    checksum-in-filename=false
     base-libs=eb973464460455b7b3369d2423cbce28
     feed=52f1ad2c66be23b554dfc46a987040e7
     group=1f8a721879bbfdd24f23e455a6b67bf5
@@ -160,7 +161,8 @@ javascript-bundle-versions file from OpenStudy:
     single-pane=10a20a17c6b0862baca031cff63c2765
 
 The versions here are MD5 hashes, and can be used to append a
-cache-buster querystring to your script and link tags.
+cache-buster querystring to your script and link tags. Also note the
+checksum-in-filename entry at the top, which is explained below.
 
 You can also "mash" the scripts, meaning create the joined bundle files
 without YUI compression, by running `sbt resources:mash-scripts`.
@@ -178,6 +180,22 @@ specified S3 bucket with the specified bundles.
 
 Once again, there is a combination command,
 `resources:deploy-resources`, that runs both the deploy commands.
+
+## Checksums as part of the filename
+
+As noted by @[eltimn](https://github.com/eltimn) and
+[recommended by Google](https://developers.google.com/speed/docs/best-practices/caching#LeverageProxyCaching),
+"Most proxies, most notably Squid up through version 3.0, do not cache
+resources with a "?" in their URL even if a Cache-control: public
+header is present in the response." sbt-resource-management supports
+including the checksum as part of the filename by setting the
+`checksumInFilename in ResourceCompile` setting to true. It is false by
+default.
+
+As seen above, the bundle-version files left by sbt-resource-management
+include a line indicating whether the bundles were generated with their
+checksums included in the filenames or not. This information can then be
+used to construct the appropriate filename.
 
 ## Bundles: the Lift side
 
@@ -201,16 +219,17 @@ in your bundle files by name:
       <lift:script-bundle name="loading" />
     </tail>
 
-Notably, the bundles snippet above will include the expanded, unbundled
+Notably, the bundle snippets above will include the expanded, unbundled
 files in development mode, and only try to include the bundled files in
 production mode. When the bundled files are included, the version files
-from the above bundling step are used to append the proper cache-buster
-querystring to the script and link tags. When the non-bundled files are
-included, Lift's internal attachResourceId is used to attach the
-cache-busting querystring. attacheResourceId by default attaches a
-different unique id every time the server is run, but uses the same one
-within the same server run. You can change that by replacing
-LiftRules.attachResourceId.
+from the above bundling step are used to append the proper version
+to the script and link tags, either as a querystring parameter or as part
+of the filename, depending on the checksum-in-filename setting. When the
+non-bundled files are included, Lift's internal attachResourceId is used
+to attach the cache-busting querystring. attacheResourceId by default
+attaches a different unique id every time the server is run, but uses
+the same one within the same server run. You can change that by
+replacing LiftRules.attachResourceId.
 
 # License
 
