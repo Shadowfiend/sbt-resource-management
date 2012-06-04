@@ -85,7 +85,7 @@ package com.openstudy { package sbt {
     val compressCss = TaskKey[Unit]("compress-styles")
     val deployScripts = TaskKey[Unit]("deploy-scripts")
     val deployCss = TaskKey[Unit]("deploy-styles")
-    val compressResources = TaskKey[Unit]("deploy-resources")
+    val compressResources = TaskKey[Unit]("compress-resources")
     val deployResources = TaskKey[Unit]("deploy-resources")
     val mashScripts = TaskKey[Unit]("mash-scripts")
 
