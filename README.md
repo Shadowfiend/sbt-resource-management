@@ -181,9 +181,9 @@ Once again, there is a combination command,
 
 ## Bundles: the Lift side
 
-The Lift side of bundles is provided by a simple snippet, called Bundles
-and set up at Boot as two snippets: `script-bundle` and
-`style-bundle`. The source for the relevant snippet is at
+The Lift side of bundles is provided by a simple singleton object,
+called Bundles and set up at Boot as two snippets: `script-bundle` and
+`style-bundle`. The source for the relevant snippets is at
 https://gist.github.com/2790765 . Somewhere in your Boot process, you
 can add:
 
