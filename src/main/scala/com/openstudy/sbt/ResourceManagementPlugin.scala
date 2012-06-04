@@ -1,6 +1,8 @@
 package com.openstudy { package sbt {
   import java.io._
+  import java.math.BigInteger
   import java.nio.charset.Charset
+  import java.security.MessageDigest
 
   import _root_.sbt.{File => SbtFile, _}
   import Keys.{baseDirectory, resourceDirectory, streams, target, _}
@@ -65,6 +67,7 @@ package com.openstudy { package sbt {
     val awsAccessKey = SettingKey[String]("aws-access-key")
     val awsSecretKey = SettingKey[String]("aws-secret-key")
     val awsS3Bucket = SettingKey[String]("aws-s3-bucket")
+    val checksumInFilename = SettingKey[Boolean]("checksum-in-filename")
     val compiledCoffeeScriptDirectory = SettingKey[File]("compiled-coffee-script-directory")
     val targetJavaScriptDirectory = SettingKey[File]("target-java-script-directory")
     val bundleDirectory = SettingKey[File]("bundle-directory")
@@ -81,8 +84,8 @@ package com.openstudy { package sbt {
     val compileCoffeeScript = TaskKey[Unit]("compile-coffee-script")
     val copyScripts = TaskKey[Unit]("copy-scripts")
     val compileSass = TaskKey[Unit]("compile-sass")
-    val compressScripts = TaskKey[Unit]("compress-scripts")
-    val compressCss = TaskKey[Unit]("compress-styles")
+    val compressScripts = TaskKey[Map[String,String]]("compress-scripts")
+    val compressCss = TaskKey[Map[String,String]]("compress-styles")
     val deployScripts = TaskKey[Unit]("deploy-scripts")
     val deployCss = TaskKey[Unit]("deploy-styles")
     val compressResources = TaskKey[Unit]("compress-resources")
@@ -170,7 +173,7 @@ package com.openstudy { package sbt {
       }
     }
 
-    def doCompress(streams:TaskStreams, sourceDirectories:Seq[File], compressedTarget:File, bundle:File, extension:String, compressor:(Seq[String],BufferedWriter,ExceptionErrorReporter)=>Unit) = {
+    def doCompress(streams:TaskStreams, checksumInFilename:Boolean, sourceDirectories:Seq[File], compressedTarget:File, bundle:File, extension:String, compressor:(Seq[String],BufferedWriter,ExceptionErrorReporter)=>Unit) : Map[String,String] = {
       if (bundle.exists) {
         try {
           val bundles = Map[String,List[String]]() ++
@@ -186,11 +189,11 @@ package com.openstudy { package sbt {
             }
 
           IO.delete(compressedTarget)
-          streams.log.info("  Found " + bundles.size + " bundles.")
+          streams.log.info("  Found " + bundles.size + " " + extension + " bundles.")
           for {
-            (bundle, files) <- bundles
-          } {
-            streams.log.info("    Bundling " + files.length + " files into bundle " + bundle + "...")
+            (bundleName, files) <- bundles
+          } yield {
+            streams.log.info("    Bundling " + files.length + " files into bundle " + bundleName + "...")
             val contentsToCompress =
               (for {
                 filename <- files
@@ -200,9 +203,29 @@ package com.openstudy { package sbt {
               })
 
             IO.createDirectory(compressedTarget)
-            IO.writer(compressedTarget / (bundle + "." + extension), "", Charset.forName("UTF-8"), false) { writer =>
-              compressor(contentsToCompress, writer, new ExceptionErrorReporter(streams, bundle))
-            }
+            val stringWriter = new StringWriter
+            val bufferedWriter = new BufferedWriter(stringWriter)
+            compressor(contentsToCompress, bufferedWriter,
+                       new ExceptionErrorReporter(streams, bundleName))
+
+            bufferedWriter.flush()
+            val compressedContents = stringWriter.toString()
+            // Preliminary research shows this doesn't really produce the same output
+            // as say the md5sum program, but we don't care, we just want a nice
+            // filename.
+            val digestBytes =
+              MessageDigest.getInstance("MD5").digest(compressedContents.getBytes("UTF-8"))
+            val checksum = new BigInteger(1, digestBytes).toString(16)
+
+            val filename =
+              if (checksumInFilename)
+                bundleName + "-" + checksum
+              else
+                bundleName
+
+            IO.writer(compressedTarget / (filename + "." + extension), "", Charset.forName("UTF-8"), false)(_.append(compressedContents))
+
+            (bundleName, checksum)
           }
         } catch {
           case exception =>
@@ -212,11 +235,13 @@ package com.openstudy { package sbt {
         }
       } else {
         streams.log.warn("Couldn't find " + bundle.absolutePath + "; not generating any bundles.")
+
+        Map()
       }
     }
 
-    def doScriptCompress(streams:TaskStreams, copyScripts:Unit, targetJsDirectory:File, compressedTarget:File, scriptBundle:File) = {
-      doCompress(streams, List(targetJsDirectory), compressedTarget / "javascripts", scriptBundle, "js", { (fileContents, writer, reporter) =>
+    def doScriptCompress(streams:TaskStreams, checksumInFilename:Boolean, copyScripts:Unit, targetJsDirectory:File, compressedTarget:File, scriptBundle:File) = {
+      doCompress(streams, checksumInFilename, List(targetJsDirectory), compressedTarget / "javascripts", scriptBundle, "js", { (fileContents, writer, reporter) =>
         val compressor =
           new JavaScriptCompressor(
             new StringReader(fileContents.mkString(";\n")),
@@ -228,15 +253,15 @@ package com.openstudy { package sbt {
           defaultCompressionOptions.disableOptimizations)
       })
     }
-    def doScriptMash(streams:TaskStreams, copyScripts:Unit, targetJsDirectory:File, compressedTarget:File, scriptBundle:File) = {
-      doCompress(streams, List(targetJsDirectory), compressedTarget / "javascripts", scriptBundle, "js", { (fileContents, writer, reporter) =>
+    def doScriptMash(streams:TaskStreams, checksumInFilename:Boolean, copyScripts:Unit, targetJsDirectory:File, compressedTarget:File, scriptBundle:File) = {
+      doCompress(streams, checksumInFilename, List(targetJsDirectory), compressedTarget / "javascripts", scriptBundle, "js", { (fileContents, writer, reporter) =>
         val mashedScript = fileContents.mkString(";\n")
 
         writer.write(mashedScript, 0, mashedScript.length)
       })
     }
-    def doCssCompress(streams:TaskStreams, compileSass:Unit, styleDirectories:Seq[File], compressedTarget:File, styleBundle:File) = {
-      doCompress(streams, styleDirectories, compressedTarget / "stylesheets", styleBundle, "css", { (fileContents, writer, reporter) =>
+    def doCssCompress(streams:TaskStreams, checksumInFilename:Boolean, compileSass:Unit, styleDirectories:Seq[File], compressedTarget:File, styleBundle:File) = {
+      doCompress(streams, checksumInFilename, styleDirectories, compressedTarget / "stylesheets", styleBundle, "css", { (fileContents, writer, reporter) =>
         val compressor =
           new CssCompressor(new StringReader(fileContents.mkString("")))
 
@@ -244,37 +269,49 @@ package com.openstudy { package sbt {
       })
     }
 
-    def doDeploy(streams:TaskStreams, bundleVersions:File, baseCompressedTarget:File, files:Seq[File], mimeType:String, access:String, secret:String, bucket:String) = {
-      val handler = new S3Handler(access, secret, bucket)
+    def doDeploy(streams:TaskStreams, checksumInFilename:Boolean, bundleChecksums:Map[String,String], bundleVersions:File, baseCompressedTarget:File, files:Seq[File], mimeType:String, access:String, secret:String, bucket:String) = {
+      try {
+        val handler = new S3Handler(access, secret, bucket)
 
-      IO.write(bundleVersions.asFile, "")
-      for {
-        file <- files
-        bundle = file.base
-        relativePath <- IO.relativize(baseCompressedTarget, file)
-      } yield {
-        streams.log.info("  Deploying bundle " + bundle + " as " + relativePath + "...")
+        IO.write(bundleVersions.asFile, "checksum-in-filename=" + checksumInFilename + "\n")
+        for {
+          file <- files
+          bundle =
+            (if (checksumInFilename)
+              file.base.split("-").dropRight(1).mkString("-")
+            else
+              file.base)
+          checksum <- bundleChecksums.get(bundle)
+          relativePath <- IO.relativize(baseCompressedTarget, file)
+        } yield {
+          streams.log.info("  Deploying bundle " + bundle + " as " + relativePath + "...")
 
-        try {
-          val contents = IO.readBytes(file) 
-          val checksum = handler.saveFile(mimeType, relativePath, contents)
+          try {
+            val contents = IO.readBytes(file)
+            handler.saveFile(mimeType, relativePath, contents)
 
-          IO.append(bundleVersions, bundle + "=" + checksum + "\n")
-        } catch {
-          case e =>
-            streams.log.error(e.getMessage + "\n" + e.getStackTrace.mkString("\n"))
-            throw new RuntimeException("Failed to upload " + file)
+            IO.append(bundleVersions, bundle + "=" + checksum + "\n")
+          } catch {
+            case e =>
+              streams.log.error(e.getMessage + "\n" + e.getStackTrace.mkString("\n"))
+              throw new RuntimeException("Failed to upload " + file)
+          }
         }
+      } catch {
+        case exception =>
+          streams.log.error(exception.toString + "\n" + exception.getStackTrace.map(_.toString).mkString("\n"))
+          throw new RuntimeException("Deploy failed.")
       }
     }
-    def doScriptDeploy(streams:TaskStreams, compressScripts:Unit, scriptBundleVersions:File, compressedTarget:File, access:String, secret:String, bucket:String) = {
-      doDeploy(streams, scriptBundleVersions, compressedTarget, (compressedTarget / "javascripts" ** "*.js").get, "text/javascript", access, secret, bucket)
+    def doScriptDeploy(streams:TaskStreams, checksumInFilename:Boolean, bundleChecksums:Map[String,String], scriptBundleVersions:File, compressedTarget:File, access:String, secret:String, bucket:String) = {
+      doDeploy(streams, checksumInFilename, bundleChecksums, scriptBundleVersions, compressedTarget, (compressedTarget / "javascripts" ** "*.js").get, "text/javascript", access, secret, bucket)
     }
-    def doCssDeploy(streams:TaskStreams, compressStyles:Unit, styleBundleVersions:File, compressedTarget:File, access:String, secret:String, bucket:String) = {
-      doDeploy(streams, styleBundleVersions, compressedTarget, (compressedTarget / "stylesheets" ** "*.css").get, "text/css", access, secret, bucket)
+    def doCssDeploy(streams:TaskStreams, checksumInFilename:Boolean, bundleChecksums:Map[String,String], styleBundleVersions:File, compressedTarget:File, access:String, secret:String, bucket:String) = {
+      doDeploy(streams, checksumInFilename, bundleChecksums, styleBundleVersions, compressedTarget, (compressedTarget / "stylesheets" ** "*.css").get, "text/css", access, secret, bucket)
     }
 
     val resourceManagementSettings = Seq(
+      checksumInFilename in ResourceCompile := false,
       bundleDirectory in ResourceCompile <<= (resourceDirectory in Compile)(_ / "bundles"),
       scriptBundle in ResourceCompile <<= (bundleDirectory in ResourceCompile)(_ / "javascript.bundle"),
       styleBundle in ResourceCompile <<= (bundleDirectory in ResourceCompile)(_ / "stylesheet.bundle"),
@@ -291,15 +328,15 @@ package com.openstudy { package sbt {
       compileCoffeeScript in ResourceCompile <<= (streams, baseDirectory, compiledCoffeeScriptDirectory in ResourceCompile, coffeeScriptSources in ResourceCompile) map doCoffeeScriptCompile _,
       copyScripts in ResourceCompile <<= (streams, compileCoffeeScript in ResourceCompile, compiledCoffeeScriptDirectory in ResourceCompile, scriptDirectories in ResourceCompile, targetJavaScriptDirectory in ResourceCompile) map doScriptCopy _,
       compileSass in ResourceCompile <<= (streams, awsS3Bucket) map doSassCompile _,
-      compressScripts in ResourceCompile <<= (streams, copyScripts in ResourceCompile, targetJavaScriptDirectory in ResourceCompile, compressedTarget in ResourceCompile, scriptBundle in ResourceCompile) map doScriptCompress _,
-      compressCss in ResourceCompile <<= (streams, compileSass in ResourceCompile, styleDirectories in ResourceCompile, compressedTarget in ResourceCompile, styleBundle in ResourceCompile) map doCssCompress _,
-      deployScripts in ResourceCompile <<= (streams, compressScripts in ResourceCompile, scriptBundleVersions in ResourceCompile, compressedTarget in ResourceCompile, awsAccessKey, awsSecretKey, awsS3Bucket) map doScriptDeploy _,
-      deployCss in ResourceCompile <<= (streams, compressCss in ResourceCompile, styleBundleVersions in ResourceCompile, compressedTarget in ResourceCompile, awsAccessKey, awsSecretKey, awsS3Bucket) map doCssDeploy _,
+      compressScripts in ResourceCompile <<= (streams, checksumInFilename in ResourceCompile, copyScripts in ResourceCompile, targetJavaScriptDirectory in ResourceCompile, compressedTarget in ResourceCompile, scriptBundle in ResourceCompile) map doScriptCompress _,
+      compressCss in ResourceCompile <<= (streams, checksumInFilename in ResourceCompile, compileSass in ResourceCompile, styleDirectories in ResourceCompile, compressedTarget in ResourceCompile, styleBundle in ResourceCompile) map doCssCompress _,
+      deployScripts in ResourceCompile <<= (streams, checksumInFilename in ResourceCompile, compressScripts in ResourceCompile, scriptBundleVersions in ResourceCompile, compressedTarget in ResourceCompile, awsAccessKey, awsSecretKey, awsS3Bucket) map doScriptDeploy _,
+      deployCss in ResourceCompile <<= (streams, checksumInFilename in ResourceCompile, compressCss in ResourceCompile, styleBundleVersions in ResourceCompile, compressedTarget in ResourceCompile, awsAccessKey, awsSecretKey, awsS3Bucket) map doCssDeploy _,
 
       compressResources in ResourceCompile <<= (compressScripts in ResourceCompile, compressCss in ResourceCompile) map { (thing, other) => },
       deployResources in ResourceCompile <<= (deployScripts in ResourceCompile, deployCss in ResourceCompile) map { (_, _) => },
 
-      mashScripts in ResourceCompile <<= (streams, copyScripts in ResourceCompile, targetJavaScriptDirectory in ResourceCompile, compressedTarget in ResourceCompile, scriptBundle in ResourceCompile) map doScriptMash _,
+      mashScripts in ResourceCompile <<= (streams, checksumInFilename in ResourceCompile, copyScripts in ResourceCompile, targetJavaScriptDirectory in ResourceCompile, compressedTarget in ResourceCompile, scriptBundle in ResourceCompile) map doScriptMash _,
       watchSources <++= (coffeeScriptSources in ResourceCompile)
     )
   }
