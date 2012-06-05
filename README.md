@@ -13,22 +13,25 @@ configuration is used to bundle JS and CSS into bundles that can be used
 in Lift. Notably, there is a component of the bundling process that
 requires support in the Lift app, not in sbt. More on that in a moment.
 
-## Building
-
-You can clone this repository:
-
-    $ git clone git://github.com/Shadowfiend/sbt-resource-management.git
-
-And then run publish-local to publish it to your local Ivy repository:
-
-    $ cd sbt-resource-management
-    $ sbt publish-local
-
 ## Adding as a plugin
 
-In your project's project/build.sbt:
+In your project's `project/project/Plugins.scala`:
 
-    addSbtPlugin("com.openstudy" % "sbt-resource-management" % "0.1.1-SNAPSHOT")
+```scala
+import sbt._
+
+object Plugins extends Build {
+  lazy val root              = Project("plugins", file(".")) dependsOn(resourcesPlugin)
+  lazy val resourcesPlugin   = uri("git://github.com/Shadowfiend/sbt-resource-management.git#0.1.2")
+}
+```
+
+You can use the version of sbt-resource-management that you want after
+the # sign (this can refer to a git tag or a git commit by SHA
+hash). You can also leave the hash off to track the latest version of
+the plugin. See section 1d of
+[the sbt plugin docs](https://github.com/harrah/xsbt/wiki/Plugins) for
+more information on this.
 
 ## Setup
 
