@@ -337,7 +337,9 @@ package com.openstudy { package sbt {
       deployResources in ResourceCompile <<= (deployScripts in ResourceCompile, deployCss in ResourceCompile) map { (_, _) => },
 
       mashScripts in ResourceCompile <<= (streams, checksumInFilename in ResourceCompile, copyScripts in ResourceCompile, targetJavaScriptDirectory in ResourceCompile, compressedTarget in ResourceCompile, scriptBundle in ResourceCompile) map doScriptMash _,
-      watchSources <++= (coffeeScriptSources in ResourceCompile)
+      watchSources <++= (coffeeScriptSources in ResourceCompile, scriptDirectories in ResourceCompile) map {
+        (csSources, scriptDirectories) => csSources ++ scriptDirectories
+      }
     )
   }
 } }
