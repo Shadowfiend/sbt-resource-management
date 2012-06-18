@@ -128,6 +128,17 @@ CSS is similar:
 
 The resulting bundle here is landing.css.
 
+You can also reference another bundle name in a bundle to include its files in
+the current bundle. For example:
+
+    super-landing
+    landing
+    more-landing.js
+    massive-landing.js
+
+The above super-landing.js bundle would include everything in the landing
+bundle, plus the more-landing.js and massive-landing.js files.
+
 Scripts and CSS are combined and compressed with the two commands:
 
     $ sbt resources:compress-scripts
