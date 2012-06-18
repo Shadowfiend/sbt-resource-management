@@ -188,19 +188,30 @@ package com.openstudy { package sbt {
               }
             }
 
+          def contentsForBundle(bundleName:String, filesAndBundles:Option[List[String]] = None) : List[String] = {
+            (filesAndBundles orElse bundles.get(bundleName)).toList.flatMap { filesAndBundles =>
+              filesAndBundles.flatMap { fileOrBundleName =>
+                if (fileOrBundleName.contains(".")) {
+                  // If it contains a ., we consider it a filename.
+                  val matchingFiles = fileOrBundleName.split("/").foldLeft(sourceDirectories:PathFinder)(_ * _)
+                  for (file <- matchingFiles.get) yield {
+                    IO.read(file, Charset.forName("UTF-8"))
+                  }
+                } else {
+                  // With no ., we consider it a bundle name.
+                  contentsForBundle(fileOrBundleName)
+                }
+              }
+            }
+          }
+
           IO.delete(compressedTarget)
           streams.log.info("  Found " + bundles.size + " " + extension + " bundles.")
           for {
-            (bundleName, files) <- bundles
+            (bundleName, filesAndBundles) <- bundles
           } yield {
-            streams.log.info("    Bundling " + files.length + " files into bundle " + bundleName + "...")
-            val contentsToCompress =
-              (for {
-                filename <- files
-                file <- (filename.split("/").foldLeft(sourceDirectories:PathFinder)(_ * _)).get
-              } yield {
-                IO.read(file, Charset.forName("UTF-8"))
-              })
+            streams.log.info("    Bundling " + filesAndBundles.length + " files and bundles into bundle " + bundleName + "...")
+            val contentsToCompress = contentsForBundle(bundleName)
 
             IO.createDirectory(compressedTarget)
             val stringWriter = new StringWriter
