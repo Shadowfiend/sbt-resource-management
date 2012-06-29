@@ -142,7 +142,7 @@ bundle, plus the more-landing.js and massive-landing.js files.
 Scripts and CSS are combined and compressed with the two commands:
 
     $ sbt resources:compress-scripts
-    $ sbt resources:compress-css
+    $ sbt resources:compress-styles
 
 These read the above bundle definitions and create the appropriate
 combined, compressed bundle files, dropping them in the compressed
@@ -187,7 +187,7 @@ If you defined the AWS settings above, SBT resource management can also
 push your compressed script and CSS bundles to S3. Just run:
 
     $ sbt resources:deploy-scripts
-    $ sbt resources:deploy-css
+    $ sbt resources:deploy-styles
 
 This will create javascripts/ and stylesheets/ directories in the
 specified S3 bucket with the specified bundles.
