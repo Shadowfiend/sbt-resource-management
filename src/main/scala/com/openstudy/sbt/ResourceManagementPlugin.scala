@@ -12,13 +12,11 @@ package com.openstudy { package sbt {
 
 
   object ResourceManagementPlugin extends Plugin {
-    // The result of a CoffeeScript compile.
-    class CsCompileResult(pathToCs:String, pathToJs:String) {
-      private val runtime = java.lang.Runtime.getRuntime
+    case class PathInformation(source:String, target:String)
+    abstract class CompileResult {
+      protected val runtime = java.lang.Runtime.getRuntime
 
-      private val process = runtime.exec(
-        ("coffee" :: "-o" :: pathToJs ::
-                    "-c" :: pathToCs :: Nil).toArray)
+      protected def process : java.lang.Process
 
       private val result = process.waitFor
 
@@ -29,6 +27,19 @@ package com.openstudy { package sbt {
           scala.io.Source.fromInputStream(process.getErrorStream).mkString("")
         else
           ""
+    }
+
+    // The result of a CoffeeScript compile.
+    class CsCompileResult(info:PathInformation) extends CompileResult {
+      protected lazy val process = runtime.exec(
+        ("coffee" :: "-o" :: info.target ::
+                    "-c" :: info.source :: Nil).toArray)
+    }
+    class LessCompileResult(info:PathInformation) extends CompileResult {
+      protected lazy val process = {
+        runtime.exec(
+        ("lessc" :: info.source :: info.target :: Nil).toArray)
+      }
     }
 
     /**
@@ -69,6 +80,7 @@ package com.openstudy { package sbt {
     val awsS3Bucket = SettingKey[String]("aws-s3-bucket")
     val checksumInFilename = SettingKey[Boolean]("checksum-in-filename")
     val compiledCoffeeScriptDirectory = SettingKey[File]("compiled-coffee-script-directory")
+    val compiledLessDirectory = SettingKey[File]("compiled-less-directory")
     val targetJavaScriptDirectory = SettingKey[File]("target-java-script-directory")
     val bundleDirectory = SettingKey[File]("bundle-directory")
     val scriptBundle = SettingKey[File]("javascript-bundle")
@@ -84,6 +96,9 @@ package com.openstudy { package sbt {
     val compileCoffeeScript = TaskKey[Unit]("compile-coffee-script")
     val copyScripts = TaskKey[Unit]("copy-scripts")
     val compileSass = TaskKey[Unit]("compile-sass")
+    val lessSources = TaskKey[Seq[File]]("less-sources")
+    val cleanLess = TaskKey[Unit]("clean-less")
+    val compileLess = TaskKey[Unit]("compile-less")
     val compressScripts = TaskKey[Map[String,String]]("compress-scripts")
     val compressCss = TaskKey[Map[String,String]]("compress-styles")
     val deployScripts = TaskKey[Unit]("deploy-scripts")
@@ -100,36 +115,42 @@ package com.openstudy { package sbt {
       }
     }
 
-    case class PathInformation(source:String, target:String)
-    def doCoffeeScriptCompile(streams:TaskStreams, baseDirectory:File, compiledCsDir:File, csSources:Seq[File]) = {
+    def doProcessCompile(streams:TaskStreams, baseDirectory:File, destinationDirectory:File, sources:Seq[File], filetype:String, targetExtension:String, compile:(PathInformation)=>CompileResult, targetIsDirectory:Boolean = false) = {
       def outdated_?(source:File) = {
-        val target = compiledCsDir / (source.base + ".js")
+        val target = destinationDirectory / (source.base + "." + targetExtension)
 
         source.lastModified() > target.lastModified()
       }
-      val outdatedPaths = csSources.collect {
+      val outdatedPaths = sources.collect {
         case file if outdated_?(file) =>
           PathInformation(
             IO.relativize(baseDirectory, file).get,
-            IO.relativize(baseDirectory, compiledCsDir).get
+            if (targetIsDirectory)
+              IO.relativize(baseDirectory, destinationDirectory).get
+            else
+              IO.relativize(baseDirectory, destinationDirectory / (file.base + "." + targetExtension)).get
           )
       }
 
       if (outdatedPaths.length > 0) {
         streams.log.info(
-          "Compiling " + outdatedPaths.length + " CoffeeScript sources to " +
-          compiledCsDir + "..."
+          "Compiling " + outdatedPaths.length + " " + filetype + " sources to " +
+          destinationDirectory + "..."
         )
 
         val failures = outdatedPaths.collect {
-          case PathInformation(source, target) => new CsCompileResult(source, target)
+          case pathInfo => compile(pathInfo)
         }.partition(_.failed_?)._1.map(_.error)
 
         if (failures.length != 0) {
           streams.log.error(failures.mkString("\n"))
-          throw new RuntimeException("CoffeeScript compilation failed.")
+          throw new RuntimeException(filetype + " compilation failed.")
         }
       }
+    }
+
+    def doCoffeeScriptCompile(streams:TaskStreams, baseDirectory:File, compiledCsDir:File, csSources:Seq[File]) = {
+      doProcessCompile(streams, baseDirectory, compiledCsDir, csSources, "CoffeeScript", "js", new CsCompileResult(_), targetIsDirectory = true)
     }
 
     def doScriptCopy(streams:TaskStreams, coffeeScriptCompile:Unit, compiledCsDir:File, scriptDirectories:Seq[File], targetJSDir:File) = {
@@ -171,6 +192,18 @@ package com.openstudy { package sbt {
       } else {
         streams.log.info("Done.")
       }
+    }
+
+    def doLessClean(streams:TaskStreams, baseDiretory:File, compiledLessDir:File, lessSources:Seq[File]) = {
+      streams.log.info("Cleaning " + lessSources.length + " generated CSS files.")
+
+      val outdatedPaths = lessSources.foreach { source =>
+        (compiledLessDir / (source.base + ".css")).delete
+      }
+    }
+
+    def doLessCompile(streams:TaskStreams, baseDirectory:File, compiledLessDir:File, lessSources:Seq[File]) = {
+      doProcessCompile(streams, baseDirectory, compiledLessDir, lessSources, "LESS", "css", new LessCompileResult(_))
     }
 
     def doCompress(streams:TaskStreams, checksumInFilename:Boolean, sourceDirectories:Seq[File], compressedTarget:File, bundle:File, extension:String, compressor:(Seq[String],BufferedWriter,ExceptionErrorReporter)=>Unit) : Map[String,String] = {
@@ -330,15 +363,19 @@ package com.openstudy { package sbt {
       styleBundleVersions in ResourceCompile <<= (bundleDirectory in ResourceCompile)(_ / "stylesheet-bundle-versions"),
       compiledCoffeeScriptDirectory in ResourceCompile <<= target(_ / "compiled-coffee-script"),
       targetJavaScriptDirectory in ResourceCompile <<= target(_ / "javascripts"),
+      compiledLessDirectory in ResourceCompile <<= (webappResources in Compile) { resources => (resources * "stylesheets").get.head },
       compressedTarget in ResourceCompile <<= target(_ / "compressed"),
 
       scriptDirectories in ResourceCompile <<= (webappResources in Compile) map { resources => (resources * "javascripts").get },
       styleDirectories in ResourceCompile <<= (webappResources in Compile) map { resources => (resources * "stylesheets").get },
       coffeeScriptSources in ResourceCompile <<= (webappResources in Compile) map { resources => (resources ** "*.coffee").get },
+      lessSources in ResourceCompile <<= (webappResources in Compile) map { resources => (resources ** "*.less").get.filter(! _.name.startsWith("_")) },
       cleanCoffeeScript in ResourceCompile <<= (streams, baseDirectory, compiledCoffeeScriptDirectory in ResourceCompile, coffeeScriptSources in ResourceCompile) map doCoffeeScriptClean _,
       compileCoffeeScript in ResourceCompile <<= (streams, baseDirectory, compiledCoffeeScriptDirectory in ResourceCompile, coffeeScriptSources in ResourceCompile) map doCoffeeScriptCompile _,
       copyScripts in ResourceCompile <<= (streams, compileCoffeeScript in ResourceCompile, compiledCoffeeScriptDirectory in ResourceCompile, scriptDirectories in ResourceCompile, targetJavaScriptDirectory in ResourceCompile) map doScriptCopy _,
       compileSass in ResourceCompile <<= (streams, awsS3Bucket) map doSassCompile _,
+      cleanLess in ResourceCompile <<= (streams, baseDirectory, compiledLessDirectory in ResourceCompile, lessSources in ResourceCompile) map doLessClean _,
+      compileLess in ResourceCompile <<= (streams, baseDirectory, compiledLessDirectory in ResourceCompile, lessSources in ResourceCompile) map doLessCompile _,
       compressScripts in ResourceCompile <<= (streams, checksumInFilename in ResourceCompile, copyScripts in ResourceCompile, targetJavaScriptDirectory in ResourceCompile, compressedTarget in ResourceCompile, scriptBundle in ResourceCompile) map doScriptCompress _,
       compressCss in ResourceCompile <<= (streams, checksumInFilename in ResourceCompile, compileSass in ResourceCompile, styleDirectories in ResourceCompile, compressedTarget in ResourceCompile, styleBundle in ResourceCompile) map doCssCompress _,
       deployScripts in ResourceCompile <<= (streams, checksumInFilename in ResourceCompile, compressScripts in ResourceCompile, scriptBundleVersions in ResourceCompile, compressedTarget in ResourceCompile, awsAccessKey, awsSecretKey, awsS3Bucket) map doScriptDeploy _,
