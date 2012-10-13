@@ -368,8 +368,12 @@ package com.openstudy { package sbt {
         doDeploy(streams, checksumInFilename, bundleChecksums, scriptBundleVersions, compressedTarget, files, "text/javascript", access, secret, bucketName)
       }
     }
-    def doCssDeploy(streams:TaskStreams, checksumInFilename:Boolean, bundleChecksums:Map[String,String], styleBundleVersions:File, compressedTarget:File, access:String, secret:String, bucket:String) = {
-      doDeploy(streams, checksumInFilename, bundleChecksums, styleBundleVersions, compressedTarget, (compressedTarget / "stylesheets" ** "*.css").get, "text/css", access, secret, bucket)
+    def doCssDeploy(streams:TaskStreams, checksumInFilename:Boolean, bundleChecksums:Map[String,String], styleBundleVersions:File, compressedTarget:File, access:String, secret:String, defaultBucket:String) = {
+      val bundles = (compressedTarget / "stylesheets" ** "*.css").get
+
+      withBucketMapping(bundles, defaultBucket, customBucketMap.toMap) { (bucketName, files) =>
+        doDeploy(streams, checksumInFilename, bundleChecksums, styleBundleVersions, compressedTarget, files, "text/css", access, secret, bucketName)
+      }
     }
 
     val resourceManagementSettings = Seq(
