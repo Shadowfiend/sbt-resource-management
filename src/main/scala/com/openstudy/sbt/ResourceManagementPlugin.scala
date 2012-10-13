@@ -348,20 +348,23 @@ package com.openstudy { package sbt {
           throw new RuntimeException("Deploy failed.")
       }
     }
-    def doScriptDeploy(streams:TaskStreams, checksumInFilename:Boolean, bundleChecksums:Map[String,String], scriptBundleVersions:File, compressedTarget:File, access:String, secret:String, defaultBucket:String, customBucketMap:Map[String, List[String]]) = {
-      val bundles = (compressedTarget / "javascripts" ** "*.js").get
-
-      // Default bucket.
+    def withBucketMapping(bundles:Seq[File], defaultBucket:String, customBucketMap:Map[String, List[String]])(deployHandler:(String, Seq[File])=>Unit) = {
       val bundlesForDefaultBucket = bundles.filterNot((file) => customBucketMap.contains(file.getName))
-      doDeploy(streams, checksumInFilename, bundleChecksums, scriptBundleVersions, compressedTarget, bundlesForDefaultBucket, "text/javascript", access, secret, defaultBucket)
+      deployHandler(defaultBucket, bundlesForDefaultBucket)
 
-      //Custom routing rules
       for {
         customBucketName <- customBucketMap.keys
         bucketFiles <- customBucketMap.get(customBucketName)
         bundlesForBucket = bundles.filter((file) => bucketFiles.contains(file.getName))
       } {
-        doDeploy(streams, checksumInFilename, bundleChecksums, scriptBundleVersions, compressedTarget, bundlesForBucket, "text/javascript", access, secret, customBucketName)
+        deployHandler(defaultBucket, bundlesForDefaultBucket)
+      }
+    }
+    def doScriptDeploy(streams:TaskStreams, checksumInFilename:Boolean, bundleChecksums:Map[String,String], scriptBundleVersions:File, compressedTarget:File, access:String, secret:String, defaultBucket:String, customBucketMap:Map[String, List[String]]) = {
+      val bundles = (compressedTarget / "javascripts" ** "*.js").get
+
+      withBucketMapping(bundles, defaultBucket, customBucketMap) { (bucketName, files) =>
+        doDeploy(streams, checksumInFilename, bundleChecksums, scriptBundleVersions, compressedTarget, files, "text/javascript", access, secret, bucketName)
       }
     }
     def doCssDeploy(streams:TaskStreams, checksumInFilename:Boolean, bundleChecksums:Map[String,String], styleBundleVersions:File, compressedTarget:File, access:String, secret:String, bucket:String) = {
