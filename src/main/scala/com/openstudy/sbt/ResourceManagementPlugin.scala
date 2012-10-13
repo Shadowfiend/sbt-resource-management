@@ -78,6 +78,7 @@ package com.openstudy { package sbt {
     val awsAccessKey = SettingKey[String]("aws-access-key")
     val awsSecretKey = SettingKey[String]("aws-secret-key")
     val awsS3Bucket = SettingKey[String]("aws-s3-bucket")
+    val customBucketMap = SettingKey[Map[String,List[String]]]("custom-bucket-map")
     val checksumInFilename = SettingKey[Boolean]("checksum-in-filename")
     val compiledCoffeeScriptDirectory = SettingKey[File]("compiled-coffee-script-directory")
     val compiledLessDirectory = SettingKey[File]("compiled-less-directory")
@@ -347,8 +348,21 @@ package com.openstudy { package sbt {
           throw new RuntimeException("Deploy failed.")
       }
     }
-    def doScriptDeploy(streams:TaskStreams, checksumInFilename:Boolean, bundleChecksums:Map[String,String], scriptBundleVersions:File, compressedTarget:File, access:String, secret:String, bucket:String) = {
-      doDeploy(streams, checksumInFilename, bundleChecksums, scriptBundleVersions, compressedTarget, (compressedTarget / "javascripts" ** "*.js").get, "text/javascript", access, secret, bucket)
+    def doScriptDeploy(streams:TaskStreams, checksumInFilename:Boolean, bundleChecksums:Map[String,String], scriptBundleVersions:File, compressedTarget:File, access:String, secret:String, defaultBucket:String, customBucketMap:Map[String, List[String]]) = {
+      val bundles = (compressedTarget / "javascripts" ** "*.js").get
+
+      // Default bucket.
+      val bundlesForDefaultBucket = bundles.filterNot((file) => customBucketMap.contains(file.getName))
+      doDeploy(streams, checksumInFilename, bundleChecksums, scriptBundleVersions, compressedTarget, bundlesForDefaultBucket, "text/javascript", access, secret, defaultBucket)
+
+      //Custom routing rules
+      for {
+        customBucketName <- customBucketMap.keys
+        bucketFiles <- customBucketMap.get(customBucketName)
+        bundlesForBucket = bundles.filter((file) => bucketFiles.contains(file.getName))
+      } {
+        doDeploy(streams, checksumInFilename, bundleChecksums, scriptBundleVersions, compressedTarget, bundlesForBucket, "text/javascript", access, secret, customBucketName)
+      }
     }
     def doCssDeploy(streams:TaskStreams, checksumInFilename:Boolean, bundleChecksums:Map[String,String], styleBundleVersions:File, compressedTarget:File, access:String, secret:String, bucket:String) = {
       doDeploy(streams, checksumInFilename, bundleChecksums, styleBundleVersions, compressedTarget, (compressedTarget / "stylesheets" ** "*.css").get, "text/css", access, secret, bucket)
@@ -378,7 +392,7 @@ package com.openstudy { package sbt {
       compileLess in ResourceCompile <<= (streams, baseDirectory, compiledLessDirectory in ResourceCompile, lessSources in ResourceCompile) map doLessCompile _,
       compressScripts in ResourceCompile <<= (streams, checksumInFilename in ResourceCompile, copyScripts in ResourceCompile, targetJavaScriptDirectory in ResourceCompile, compressedTarget in ResourceCompile, scriptBundle in ResourceCompile) map doScriptCompress _,
       compressCss in ResourceCompile <<= (streams, checksumInFilename in ResourceCompile, compileSass in ResourceCompile, styleDirectories in ResourceCompile, compressedTarget in ResourceCompile, styleBundle in ResourceCompile) map doCssCompress _,
-      deployScripts in ResourceCompile <<= (streams, checksumInFilename in ResourceCompile, compressScripts in ResourceCompile, scriptBundleVersions in ResourceCompile, compressedTarget in ResourceCompile, awsAccessKey, awsSecretKey, awsS3Bucket) map doScriptDeploy _,
+      deployScripts in ResourceCompile <<= (streams, checksumInFilename in ResourceCompile, compressScripts in ResourceCompile, scriptBundleVersions in ResourceCompile, compressedTarget in ResourceCompile, awsAccessKey, awsSecretKey, awsS3Bucket, customBucketMap) map doScriptDeploy _,
       deployCss in ResourceCompile <<= (streams, checksumInFilename in ResourceCompile, compressCss in ResourceCompile, styleBundleVersions in ResourceCompile, compressedTarget in ResourceCompile, awsAccessKey, awsSecretKey, awsS3Bucket) map doCssDeploy _,
 
       compressResources in ResourceCompile <<= (compressScripts in ResourceCompile, compressCss in ResourceCompile) map { (thing, other) => },
