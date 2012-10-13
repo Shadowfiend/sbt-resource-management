@@ -216,7 +216,15 @@ package com.openstudy { package sbt {
               val lines = section.split("\n").toList
 
               if (lines.length >= 1) {
-                Some(lines(0) -> lines.drop(1))
+                // "bundlename->customBucketName"
+                val bundleIdentification = lines(0).split("->")
+
+                if (bundleIdentification.length > 1) {
+                  val filesForBucket = customBucketMap.getOrElseUpdate(bundleIdentification(1), List()) ++ List(bundleIdentification(0) + extension)
+                  customBucketMap.put(bundleIdentification(1), filesForBucket)
+                }
+
+                Some(bundleIdentification(0) -> lines.drop(1))
               } else {
                 streams.log.warn("Found a bundle with no name/content.")
                 None
