@@ -368,7 +368,7 @@ package com.openstudy { package sbt {
         bucketFiles <- customBucketMap.get(customBucketName)
         bundlesForBucket = bundles.filter((file) => bucketFiles.contains(file.getName))
       } {
-        deployHandler(defaultBucket, bundlesForDefaultBucket)
+        deployHandler(customBucketName, bundlesForBucket)
       }
     }
     def doScriptDeploy(streams:TaskStreams, checksumInFilename:Boolean, bundleChecksums:Map[String,String], scriptBundleVersions:File, compressedTarget:File, access:String, secret:String, defaultBucket:String) = {
