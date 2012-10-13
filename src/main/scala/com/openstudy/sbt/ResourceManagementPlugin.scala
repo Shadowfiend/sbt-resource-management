@@ -215,9 +215,9 @@ package com.openstudy { package sbt {
             IO.read(bundle, Charset.forName("UTF-8")).split("\n\n").flatMap { section =>
               val lines = section.split("\n").toList
 
-              if (lines.length >= 1)
+              if (lines.length >= 1) {
                 Some(lines(0) -> lines.drop(1))
-              else {
+              } else {
                 streams.log.warn("Found a bundle with no name/content.")
                 None
               }
