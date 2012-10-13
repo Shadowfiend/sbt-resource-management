@@ -139,6 +139,18 @@ the current bundle. For example:
 The above super-landing.js bundle would include everything in the landing
 bundle, plus the more-landing.js and massive-landing.js files.
 
+In the event that you need to deploy some bundles to buckets other than the
+one specified in the `awsS3Bucket` setting, the bundle file format supports
+that as well. Simply add an arrow after the end of the bundle name and provide
+the name of the bucket you wish to have that bundle deployed to. To define a
+bundle that should go to assets2.openstudy.com, you would write something like
+this:
+
+    bundle-going-elsewhere->assets2.openstudy.com
+    somescript.js
+    somescript2.js
+    rickroll.js
+
 Scripts and CSS are combined and compressed with the two commands:
 
     $ sbt resources:compress-scripts
