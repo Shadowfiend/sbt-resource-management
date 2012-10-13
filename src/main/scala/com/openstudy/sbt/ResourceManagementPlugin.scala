@@ -220,7 +220,7 @@ package com.openstudy { package sbt {
                 val bundleIdentification = lines(0).split("->")
 
                 if (bundleIdentification.length > 1) {
-                  val filesForBucket = customBucketMap.getOrElseUpdate(bundleIdentification(1), List()) ++ List(bundleIdentification(0) + extension)
+                  val filesForBucket = customBucketMap.getOrElseUpdate(bundleIdentification(1), List()) ++ List(bundleIdentification(0) + "." + extension)
                   customBucketMap.put(bundleIdentification(1), filesForBucket)
                 }
 
