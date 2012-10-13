@@ -78,7 +78,6 @@ package com.openstudy { package sbt {
     val awsAccessKey = SettingKey[String]("aws-access-key")
     val awsSecretKey = SettingKey[String]("aws-secret-key")
     val awsS3Bucket = SettingKey[String]("aws-s3-bucket")
-    val customBucketMap = SettingKey[Map[String,List[String]]]("custom-bucket-map")
     val checksumInFilename = SettingKey[Boolean]("checksum-in-filename")
     val compiledCoffeeScriptDirectory = SettingKey[File]("compiled-coffee-script-directory")
     val compiledLessDirectory = SettingKey[File]("compiled-less-directory")
@@ -107,6 +106,8 @@ package com.openstudy { package sbt {
     val compressResources = TaskKey[Unit]("compress-resources")
     val deployResources = TaskKey[Unit]("deploy-resources")
     val mashScripts = TaskKey[Unit]("mash-scripts")
+
+    val customBucketMap = scala.collection.mutable.HashMap[String, List[String]]()
 
     def doCoffeeScriptClean(streams:TaskStreams, baseDiretory:File, compiledCsDir:File, csSources:Seq[File]) = {
       streams.log.info("Cleaning " + csSources.length + " generated JavaScript files.")
@@ -360,10 +361,10 @@ package com.openstudy { package sbt {
         deployHandler(defaultBucket, bundlesForDefaultBucket)
       }
     }
-    def doScriptDeploy(streams:TaskStreams, checksumInFilename:Boolean, bundleChecksums:Map[String,String], scriptBundleVersions:File, compressedTarget:File, access:String, secret:String, defaultBucket:String, customBucketMap:Map[String, List[String]]) = {
+    def doScriptDeploy(streams:TaskStreams, checksumInFilename:Boolean, bundleChecksums:Map[String,String], scriptBundleVersions:File, compressedTarget:File, access:String, secret:String, defaultBucket:String) = {
       val bundles = (compressedTarget / "javascripts" ** "*.js").get
 
-      withBucketMapping(bundles, defaultBucket, customBucketMap) { (bucketName, files) =>
+      withBucketMapping(bundles, defaultBucket, customBucketMap.toMap) { (bucketName, files) =>
         doDeploy(streams, checksumInFilename, bundleChecksums, scriptBundleVersions, compressedTarget, files, "text/javascript", access, secret, bucketName)
       }
     }
@@ -395,7 +396,7 @@ package com.openstudy { package sbt {
       compileLess in ResourceCompile <<= (streams, baseDirectory, compiledLessDirectory in ResourceCompile, lessSources in ResourceCompile) map doLessCompile _,
       compressScripts in ResourceCompile <<= (streams, checksumInFilename in ResourceCompile, copyScripts in ResourceCompile, targetJavaScriptDirectory in ResourceCompile, compressedTarget in ResourceCompile, scriptBundle in ResourceCompile) map doScriptCompress _,
       compressCss in ResourceCompile <<= (streams, checksumInFilename in ResourceCompile, compileSass in ResourceCompile, styleDirectories in ResourceCompile, compressedTarget in ResourceCompile, styleBundle in ResourceCompile) map doCssCompress _,
-      deployScripts in ResourceCompile <<= (streams, checksumInFilename in ResourceCompile, compressScripts in ResourceCompile, scriptBundleVersions in ResourceCompile, compressedTarget in ResourceCompile, awsAccessKey, awsSecretKey, awsS3Bucket, customBucketMap) map doScriptDeploy _,
+      deployScripts in ResourceCompile <<= (streams, checksumInFilename in ResourceCompile, compressScripts in ResourceCompile, scriptBundleVersions in ResourceCompile, compressedTarget in ResourceCompile, awsAccessKey, awsSecretKey, awsS3Bucket) map doScriptDeploy _,
       deployCss in ResourceCompile <<= (streams, checksumInFilename in ResourceCompile, compressCss in ResourceCompile, styleBundleVersions in ResourceCompile, compressedTarget in ResourceCompile, awsAccessKey, awsSecretKey, awsS3Bucket) map doCssDeploy _,
 
       compressResources in ResourceCompile <<= (compressScripts in ResourceCompile, compressCss in ResourceCompile) map { (thing, other) => },
