@@ -182,7 +182,7 @@ package com.openstudy { package sbt {
 
       val runtime = java.lang.Runtime.getRuntime
       val processEnvironment = System.getenv().map { case (key, value) => key + "=" + value } ++
-                               Some(new java.lang.String("asset_domain=" + bucket))
+                               Some("asset_domain=" + bucket)
       val process =
         runtime.exec(
           ("compass" :: "compile" :: "-e" :: "production" :: "--force" :: Nil).toArray,
