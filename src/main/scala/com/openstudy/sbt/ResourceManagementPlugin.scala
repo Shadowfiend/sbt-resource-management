@@ -217,14 +217,18 @@ package com.openstudy { package sbt {
 
               if (lines.length >= 1) {
                 // "bundlename->customBucketName"
-                val bundleIdentification = lines(0).split("->")
+                lines(0).split("->").toList match {
+                  case bundleId :: customBundleTarget =>
+                    customBundleTarget.headOption.foreach { bundleTarget =>
+                      val filesForBucket = customBucketMap.getOrElseUpdate(bundleTarget, List()) ++ List(bundleId + "." + extension)
+                      customBucketMap.put(bundleTarget, filesForBucket)
+                    }
 
-                if (bundleIdentification.length > 1) {
-                  val filesForBucket = customBucketMap.getOrElseUpdate(bundleIdentification(1), List()) ++ List(bundleIdentification(0) + "." + extension)
-                  customBucketMap.put(bundleIdentification(1), filesForBucket)
+                    Some(bundleId -> lines.drop(1))
+
+                  case _ =>
+                    None
                 }
-
-                Some(bundleIdentification(0) -> lines.drop(1))
               } else {
                 streams.log.warn("Found a bundle with no name/content.")
                 None
