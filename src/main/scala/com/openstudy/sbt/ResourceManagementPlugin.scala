@@ -363,7 +363,7 @@ package com.openstudy { package sbt {
     }
     def withBucketMapping(bundles:Seq[File], defaultBucket:String, customBucketMap:Map[String, List[String]])(deployHandler:(String, Seq[File])=>Unit) = {
       val bundlesForDefaultBucket = bundles.filterNot { (file) =>
-        customBucketMap.exists(_._2.contains(file.getName))
+        customBucketMap.exists { case (id, files) => files.contains(file.getName) }
       }
       deployHandler(defaultBucket, bundlesForDefaultBucket)
 
