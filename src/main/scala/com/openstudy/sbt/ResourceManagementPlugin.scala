@@ -1,4 +1,6 @@
 package com.openstudy { package sbt {
+  import scala.collection.JavaConversions._
+
   import java.io._
   import java.math.BigInteger
   import java.nio.charset.Charset
@@ -179,10 +181,12 @@ package com.openstudy { package sbt {
       streams.log.info("Compiling SASS files...")
 
       val runtime = java.lang.Runtime.getRuntime
+      val processEnvironment = System.getenv().map { case (key, value) => key + "=" + value } ++
+                               Some(new java.lang.String("asset_domain=" + bucket))
       val process =
         runtime.exec(
           ("compass" :: "compile" :: "-e" :: "production" :: "--force" :: Nil).toArray,
-          ("asset_domain=" + bucket :: Nil).toArray)
+          processEnvironment.toArray)
       val result = process.waitFor
 
       if (result != 0) {
