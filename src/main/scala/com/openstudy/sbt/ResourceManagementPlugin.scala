@@ -361,7 +361,7 @@ package com.openstudy { package sbt {
           throw new RuntimeException("Deploy failed.")
       }
     }
-    def withBucketMapping(bundles:Seq[File], defaultBucket:String, customBucketMap:Map[String, List[String]])(deployHandler:(String, Seq[File])=>Unit) = {
+    def withBucketMapping(bundles:Seq[File], defaultBucket:String, customBucketMap:scala.collection.Map[String, List[String]])(deployHandler:(String, Seq[File])=>Unit) = {
       val bundlesForDefaultBucket = bundles.filterNot { (file) =>
         customBucketMap.exists { case (id, files) => files.contains(file.getName) }
       }
@@ -378,14 +378,14 @@ package com.openstudy { package sbt {
     def doScriptDeploy(streams:TaskStreams, checksumInFilename:Boolean, bundleChecksums:Map[String,String], scriptBundleVersions:File, compressedTarget:File, access:String, secret:String, defaultBucket:String) = {
       val bundles = (compressedTarget / "javascripts" ** "*.js").get
 
-      withBucketMapping(bundles, defaultBucket, customBucketMap.toMap) { (bucketName, files) =>
+      withBucketMapping(bundles, defaultBucket, customBucketMap) { (bucketName, files) =>
         doDeploy(streams, checksumInFilename, bundleChecksums, scriptBundleVersions, compressedTarget, files, "text/javascript", access, secret, bucketName)
       }
     }
     def doCssDeploy(streams:TaskStreams, checksumInFilename:Boolean, bundleChecksums:Map[String,String], styleBundleVersions:File, compressedTarget:File, access:String, secret:String, defaultBucket:String) = {
       val bundles = (compressedTarget / "stylesheets" ** "*.css").get
 
-      withBucketMapping(bundles, defaultBucket, customBucketMap.toMap) { (bucketName, files) =>
+      withBucketMapping(bundles, defaultBucket, customBucketMap) { (bucketName, files) =>
         doDeploy(streams, checksumInFilename, bundleChecksums, styleBundleVersions, compressedTarget, files, "text/css", access, secret, bucketName)
       }
     }
