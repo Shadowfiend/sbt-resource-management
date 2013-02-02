@@ -181,12 +181,13 @@ package com.openstudy { package sbt {
       streams.log.info("Compiling SASS files...")
 
       val runtime = java.lang.Runtime.getRuntime
-      val processEnvironment = System.getenv().map { case (key, value) => key + "=" + value } ++
-                               Some("asset_domain=" + bucket)
+      val environment = (System.getenv() + ("asset_domain" -> bucket)) map {
+        case (key, value) => key + "=" + value
+      }
       val process =
         runtime.exec(
           ("compass" :: "compile" :: "-e" :: "production" :: "--force" :: Nil).toArray,
-          processEnvironment.toArray)
+          environment.toArray)
       val result = process.waitFor
 
       if (result != 0) {
