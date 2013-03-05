@@ -177,7 +177,7 @@ package com.openstudy { package sbt {
       IO.copy(scriptCopyPaths, true)
     }
 
-    def doSassCompile(streams:TaskStreams, bucket:String) = {
+    def doSassCompile(streams:TaskStreams, baseDirectory: File, bucket:String) = {
       streams.log.info("Compiling SASS files...")
 
       val runtime = java.lang.Runtime.getRuntime
@@ -187,7 +187,8 @@ package com.openstudy { package sbt {
       val process =
         runtime.exec(
           ("compass" :: "compile" :: "-e" :: "production" :: "--force" :: Nil).toArray,
-          environment.toArray)
+          environment.toArray,
+          baseDirectory)
       val result = process.waitFor
 
       if (result != 0) {
@@ -382,7 +383,7 @@ package com.openstudy { package sbt {
       cleanCoffeeScript in ResourceCompile <<= (streams, baseDirectory, compiledCoffeeScriptDirectory in ResourceCompile, coffeeScriptSources in ResourceCompile) map doCoffeeScriptClean _,
       compileCoffeeScript in ResourceCompile <<= (streams, baseDirectory, compiledCoffeeScriptDirectory in ResourceCompile, coffeeScriptSources in ResourceCompile) map doCoffeeScriptCompile _,
       copyScripts in ResourceCompile <<= (streams, compileCoffeeScript in ResourceCompile, compiledCoffeeScriptDirectory in ResourceCompile, scriptDirectories in ResourceCompile, targetJavaScriptDirectory in ResourceCompile) map doScriptCopy _,
-      compileSass in ResourceCompile <<= (streams, awsS3Bucket) map doSassCompile _,
+      compileSass in ResourceCompile <<= (streams, baseDirectory, awsS3Bucket) map doSassCompile _,
       cleanLess in ResourceCompile <<= (streams, baseDirectory, compiledLessDirectory in ResourceCompile, lessSources in ResourceCompile) map doLessClean _,
       compileLess in ResourceCompile <<= (streams, baseDirectory, compiledLessDirectory in ResourceCompile, lessSources in ResourceCompile) map doLessCompile _,
       compressScripts in ResourceCompile <<= (streams, checksumInFilename in ResourceCompile, copyScripts in ResourceCompile, targetJavaScriptDirectory in ResourceCompile, compressedTarget in ResourceCompile, scriptBundle in ResourceCompile) map doScriptCompress _,
