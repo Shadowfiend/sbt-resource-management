@@ -82,7 +82,7 @@ package com.openstudy { package sbt {
     val awsS3Bucket = SettingKey[String]("aws-s3-bucket")
     val checksumInFilename = SettingKey[Boolean]("checksum-in-filename")
     val compiledCoffeeScriptDirectory = SettingKey[File]("compiled-coffee-script-directory")
-    val compiledLessDirectory = SettingKey[File]("compiled-less-directory")
+    val compiledLessDirectory = SettingKey[Option[File]]("compiled-less-directory")
     val targetJavaScriptDirectory = SettingKey[File]("target-java-script-directory")
     val bundleDirectory = SettingKey[File]("bundle-directory")
     val scriptBundle = SettingKey[File]("javascript-bundle")
@@ -199,16 +199,20 @@ package com.openstudy { package sbt {
       }
     }
 
-    def doLessClean(streams:TaskStreams, baseDiretory:File, compiledLessDir:File, lessSources:Seq[File]) = {
-      streams.log.info("Cleaning " + lessSources.length + " generated CSS files.")
+    def doLessClean(streams:TaskStreams, baseDiretory:File, compiledLessDir:Option[File], lessSources:Seq[File]) = {
+      compiledLessDir.map { compiledLessDir =>
+        streams.log.info("Cleaning " + lessSources.length + " generated CSS files.")
 
-      val outdatedPaths = lessSources.foreach { source =>
-        (compiledLessDir / (source.base + ".css")).delete
+        val outdatedPaths = lessSources.foreach { source =>
+          (compiledLessDir / (source.base + ".css")).delete
+        }
       }
     }
 
-    def doLessCompile(streams:TaskStreams, baseDirectory:File, compiledLessDir:File, lessSources:Seq[File]) = {
-      doProcessCompile(streams, baseDirectory, compiledLessDir, lessSources, "LESS", "css", new LessCompileResult(_))
+    def doLessCompile(streams:TaskStreams, baseDirectory:File, compiledLessDir:Option[File], lessSources:Seq[File]) = {
+      compiledLessDir.map { compiledLessDir =>
+        doProcessCompile(streams, baseDirectory, compiledLessDir, lessSources, "LESS", "css", new LessCompileResult(_))
+      }
     }
 
     def doCompress(streams:TaskStreams, checksumInFilename:Boolean, sourceDirectories:Seq[File], compressedTarget:File, bundle:File, extension:String, compressor:(Seq[String],BufferedWriter,ExceptionErrorReporter)=>Unit) : Map[String,String] = {
@@ -368,7 +372,7 @@ package com.openstudy { package sbt {
       styleBundleVersions in ResourceCompile <<= (bundleDirectory in ResourceCompile)(_ / "stylesheet-bundle-versions"),
       compiledCoffeeScriptDirectory in ResourceCompile <<= target(_ / "compiled-coffee-script"),
       targetJavaScriptDirectory in ResourceCompile <<= target(_ / "javascripts"),
-      compiledLessDirectory in ResourceCompile <<= (webappResources in Compile) { resources => (resources * "stylesheets").get.head },
+      compiledLessDirectory in ResourceCompile <<= (webappResources in Compile) { resources => (resources * "stylesheets").get.headOption },
       compressedTarget in ResourceCompile <<= target(_ / "compressed"),
 
       scriptDirectories in ResourceCompile <<= (webappResources in Compile) map { resources => (resources * "javascripts").get },
