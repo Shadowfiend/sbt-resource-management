@@ -109,6 +109,8 @@ package com.openstudy { package sbt {
     val deployResources = TaskKey[Unit]("deploy-resources")
     val mashScripts = TaskKey[Unit]("mash-scripts")
 
+    val customBucketMap = scala.collection.mutable.HashMap[String, List[String]]()
+
     def doCoffeeScriptClean(streams:TaskStreams, baseDiretory:File, compiledCsDir:File, csSources:Seq[File]) = {
       streams.log.info("Cleaning " + csSources.length + " generated JavaScript files.")
 
@@ -223,9 +225,21 @@ package com.openstudy { package sbt {
             IO.read(bundle, Charset.forName("UTF-8")).split("\n\n").flatMap { section =>
               val lines = section.split("\n").toList
 
-              if (lines.length >= 1)
-                Some(lines(0) -> lines.drop(1))
-              else {
+              if (lines.length >= 1) {
+                // "bundlename->customBucketName"
+                lines(0).split("->").toList match {
+                  case bundleId :: customBundleTarget =>
+                    customBundleTarget.headOption.foreach { bundleTarget =>
+                      val filesForBucket = customBucketMap.getOrElseUpdate(bundleTarget, List()) ++ List(bundleId + "." + extension)
+                      customBucketMap.put(bundleTarget, filesForBucket)
+                    }
+
+                    Some(bundleId -> lines.drop(1))
+
+                  case _ =>
+                    None
+                }
+              } else {
                 streams.log.warn("Found a bundle with no name/content.")
                 None
               }
@@ -357,11 +371,33 @@ package com.openstudy { package sbt {
           throw new RuntimeException("Deploy failed.")
       }
     }
-    def doScriptDeploy(streams:TaskStreams, checksumInFilename:Boolean, bundleChecksums:Map[String,String], scriptBundleVersions:File, compressedTarget:File, access:String, secret:String, bucket:String) = {
-      doDeploy(streams, checksumInFilename, bundleChecksums, scriptBundleVersions, compressedTarget, (compressedTarget / "javascripts" ** "*.js").get, "text/javascript", access, secret, bucket)
+    def withBucketMapping(bundles:Seq[File], defaultBucket:String, customBucketMap:scala.collection.Map[String, List[String]])(deployHandler:(String, Seq[File])=>Unit) = {
+      val bundlesForDefaultBucket = bundles.filterNot { (file) =>
+        customBucketMap.exists { case (id, files) => files.contains(file.getName) }
+      }
+      deployHandler(defaultBucket, bundlesForDefaultBucket)
+
+      for {
+        customBucketName <- customBucketMap.keys
+        bucketFiles <- customBucketMap.get(customBucketName)
+        bundlesForBucket = bundles.filter(file => bucketFiles.contains(file.getName))
+      } {
+        deployHandler(customBucketName, bundlesForBucket)
+      }
     }
-    def doCssDeploy(streams:TaskStreams, checksumInFilename:Boolean, bundleChecksums:Map[String,String], styleBundleVersions:File, compressedTarget:File, access:String, secret:String, bucket:String) = {
-      doDeploy(streams, checksumInFilename, bundleChecksums, styleBundleVersions, compressedTarget, (compressedTarget / "stylesheets" ** "*.css").get, "text/css", access, secret, bucket)
+    def doScriptDeploy(streams:TaskStreams, checksumInFilename:Boolean, bundleChecksums:Map[String,String], scriptBundleVersions:File, compressedTarget:File, access:String, secret:String, defaultBucket:String) = {
+      val bundles = (compressedTarget / "javascripts" ** "*.js").get
+
+      withBucketMapping(bundles, defaultBucket, customBucketMap) { (bucketName, files) =>
+        doDeploy(streams, checksumInFilename, bundleChecksums, scriptBundleVersions, compressedTarget, files, "text/javascript", access, secret, bucketName)
+      }
+    }
+    def doCssDeploy(streams:TaskStreams, checksumInFilename:Boolean, bundleChecksums:Map[String,String], styleBundleVersions:File, compressedTarget:File, access:String, secret:String, defaultBucket:String) = {
+      val bundles = (compressedTarget / "stylesheets" ** "*.css").get
+
+      withBucketMapping(bundles, defaultBucket, customBucketMap) { (bucketName, files) =>
+        doDeploy(streams, checksumInFilename, bundleChecksums, styleBundleVersions, compressedTarget, files, "text/css", access, secret, bucketName)
+      }
     }
 
     val resourceManagementSettings = Seq(
