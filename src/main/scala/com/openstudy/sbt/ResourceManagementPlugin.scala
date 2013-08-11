@@ -75,7 +75,7 @@ package com.openstudy { package sbt {
 
     val ResourceCompile = config("resources")
 
-    val webappResources = SettingKey[Seq[File]]("webapp-resources")
+    private val webappResourceAlias = SettingKey[Seq[File]]("webapp-resources")
 
     val awsAccessKey = SettingKey[String]("aws-access-key")
     val awsSecretKey = SettingKey[String]("aws-secret-key")
@@ -409,13 +409,13 @@ package com.openstudy { package sbt {
       styleBundleVersions in ResourceCompile <<= (bundleDirectory in ResourceCompile)(_ / "stylesheet-bundle-versions"),
       compiledCoffeeScriptDirectory in ResourceCompile <<= target(_ / "compiled-coffee-script"),
       targetJavaScriptDirectory in ResourceCompile <<= target(_ / "javascripts"),
-      compiledLessDirectory in ResourceCompile <<= (webappResources in Compile) { resources => (resources * "stylesheets").get.headOption },
+      compiledLessDirectory in ResourceCompile <<= (webappResourceAlias in Compile) { resources => (resources * "stylesheets").get.headOption },
       compressedTarget in ResourceCompile <<= target(_ / "compressed"),
 
-      scriptDirectories in ResourceCompile <<= (webappResources in Compile) map { resources => (resources * "javascripts").get },
-      styleDirectories in ResourceCompile <<= (webappResources in Compile) map { resources => (resources * "stylesheets").get },
-      coffeeScriptSources in ResourceCompile <<= (webappResources in Compile) map { resources => (resources ** "*.coffee").get },
-      lessSources in ResourceCompile <<= (webappResources in Compile) map { resources => (resources ** "*.less").get.filter(! _.name.startsWith("_")) },
+      scriptDirectories in ResourceCompile <<= (webappResourceAlias in Compile) map { resources => (resources * "javascripts").get },
+      styleDirectories in ResourceCompile <<= (webappResourceAlias in Compile) map { resources => (resources * "stylesheets").get },
+      coffeeScriptSources in ResourceCompile <<= (webappResourceAlias in Compile) map { resources => (resources ** "*.coffee").get },
+      lessSources in ResourceCompile <<= (webappResourceAlias in Compile) map { resources => (resources ** "*.less").get.filter(! _.name.startsWith("_")) },
       cleanCoffeeScript in ResourceCompile <<= (streams, baseDirectory, compiledCoffeeScriptDirectory in ResourceCompile, coffeeScriptSources in ResourceCompile) map doCoffeeScriptClean _,
       compileCoffeeScript in ResourceCompile <<= (streams, baseDirectory, compiledCoffeeScriptDirectory in ResourceCompile, coffeeScriptSources in ResourceCompile) map doCoffeeScriptCompile _,
       copyScripts in ResourceCompile <<= (streams, compileCoffeeScript in ResourceCompile, compiledCoffeeScriptDirectory in ResourceCompile, scriptDirectories in ResourceCompile, targetJavaScriptDirectory in ResourceCompile) map doScriptCopy _,
