@@ -41,7 +41,7 @@ Deploying to S3 requires three settings to be specified in your build.sbt:
   
     awsSecretKey := "YOUR_SECRET_KEY"
 
-    awsS3Bucket  := "YOUR_S3_BUCKET
+    awsS3Bucket  := "YOUR_S3_BUCKET"
 
 For example, at OpenStudy, our S3 bucket could be devsets.openstudy.com
 for development mode assets.
