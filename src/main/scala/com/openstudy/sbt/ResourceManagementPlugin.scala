@@ -182,25 +182,26 @@ package com.openstudy { package sbt {
     def doSassCompile(streams:TaskStreams, baseDirectory: File, bucket:Option[String]) = {
       streams.log.info("Compiling SASS files...")
 
-      withAwsConfiguration(streams, Some("extraneous"), Some("extraneous"), bucket) { (_, _, bucket) =>
-        val runtime = java.lang.Runtime.getRuntime
-        val environment = (System.getenv() + ("asset_domain" -> bucket)) map {
-          case (key, value) => key + "=" + value
-        }
-        val process =
-          runtime.exec(
-            ("compass" :: "compile" :: "-e" :: "production" :: "--force" :: Nil).toArray,
-            environment.toArray,
-            baseDirectory)
-        val result = process.waitFor
+      val runtime = java.lang.Runtime.getRuntime
+      val environment =
+        if (bucket.isDefined)
+          System.getenv() + ("asset_domain" -> bucket)
+        else
+          System.getenv().toMap
 
-        if (result != 0) {
-          streams.log.error(
-            scala.io.Source.fromInputStream(process.getErrorStream).mkString(""))
-          throw new RuntimeException("SASS compilation failed with code " + result + ".")
-        } else {
-          streams.log.info("Done.")
-        }
+      val process =
+        runtime.exec(
+          ("compass" :: "compile" :: "-e" :: "production" :: "--force" :: Nil).toArray,
+          environment.map { case (key, value) => key + "=" + value }.toArray,
+          baseDirectory)
+      val result = process.waitFor
+
+      if (result != 0) {
+        streams.log.error(
+          scala.io.Source.fromInputStream(process.getErrorStream).mkString(""))
+        throw new RuntimeException("SASS compilation failed with code " + result + ".")
+      } else {
+        streams.log.info("Done.")
       }
     }
 

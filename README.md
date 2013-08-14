@@ -39,11 +39,6 @@ You just have to import the settings from this plugin:
 
     seq(resourceManagementSettings :_*)
 
-NOTE: if you want to use resources:compile-sass, which uses compass, you
-will need to set the S3 bucket setting in the next section. This is
-because this is set as the asset_host environment variable for compass
-to use when doing a production compile.
-
 ## AWS Setup
 Deploying to S3 requires three settings to be specified in your build.sbt:
 
@@ -85,6 +80,9 @@ environment to production. You can use this in your config.rb to act
 differently in the face of production settings (we use this to enable
 relative_assets only when the environment is NOT production and to
 toggle the output style from between compressed and expanded).
+
+If the `awsS3Bucket` setting is not set, then the asset_domain
+environment variable is not set either.
 
 ## Bundles and compression
 
