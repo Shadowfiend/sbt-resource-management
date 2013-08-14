@@ -35,6 +35,16 @@ more information on this.
 
 ## Setup
 
+You just have to import the settings from this plugin:
+
+    seq(resourceManagementSettings :_*)
+
+NOTE: if you want to use resources:compile-sass, which uses compass, you
+will need to set the S3 bucket setting in the next section. This is
+because this is set as the asset_host environment variable for compass
+to use when doing a production compile.
+
+## AWS Setup
 Deploying to S3 requires three settings to be specified in your build.sbt:
 
     awsAccessKey := "YOUR_ACCESS_KEY"
@@ -45,10 +55,6 @@ Deploying to S3 requires three settings to be specified in your build.sbt:
 
 For example, at OpenStudy, our S3 bucket could be devsets.openstudy.com
 for development mode assets.
-
-You can then import the settings from this plugin:
-
-    seq(resourceManagementSettings :_*)
 
 ## Defaults
 
