@@ -35,6 +35,11 @@ more information on this.
 
 ## Setup
 
+You just have to import the settings from this plugin:
+
+    seq(resourceManagementSettings :_*)
+
+## AWS Setup
 Deploying to S3 requires three settings to be specified in your build.sbt:
 
     awsAccessKey := "YOUR_ACCESS_KEY"
@@ -45,10 +50,6 @@ Deploying to S3 requires three settings to be specified in your build.sbt:
 
 For example, at OpenStudy, our S3 bucket could be devsets.openstudy.com
 for development mode assets.
-
-You can then import the settings from this plugin:
-
-    seq(resourceManagementSettings :_*)
 
 ## Defaults
 
@@ -79,6 +80,9 @@ environment to production. You can use this in your config.rb to act
 differently in the face of production settings (we use this to enable
 relative_assets only when the environment is NOT production and to
 toggle the output style from between compressed and expanded).
+
+If the `awsS3Bucket` setting is not set, then the asset_domain
+environment variable is not set either.
 
 ## Bundles and compression
 
