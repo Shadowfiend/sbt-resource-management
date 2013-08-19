@@ -77,9 +77,9 @@ package com.openstudy { package sbt {
 
     private val webappResourceAlias = SettingKey[Seq[File]]("webapp-resources")
 
-    val awsAccessKey = SettingKey[String]("aws-access-key")
-    val awsSecretKey = SettingKey[String]("aws-secret-key")
-    val awsS3Bucket = SettingKey[String]("aws-s3-bucket")
+    val awsAccessKey = SettingKey[Option[String]]("aws-access-key")
+    val awsSecretKey = SettingKey[Option[String]]("aws-secret-key")
+    val awsS3Bucket = SettingKey[Option[String]]("aws-s3-bucket")
     val checksumInFilename = SettingKey[Boolean]("checksum-in-filename")
     val compiledCoffeeScriptDirectory = SettingKey[File]("compiled-coffee-script-directory")
     val compiledLessDirectory = SettingKey[Option[File]]("compiled-less-directory")
@@ -179,17 +179,20 @@ package com.openstudy { package sbt {
       IO.copy(scriptCopyPaths, true)
     }
 
-    def doSassCompile(streams:TaskStreams, baseDirectory: File, bucket:String) = {
+    def doSassCompile(streams:TaskStreams, baseDirectory: File, bucket:Option[String]) = {
       streams.log.info("Compiling SASS files...")
 
       val runtime = java.lang.Runtime.getRuntime
-      val environment = (System.getenv() + ("asset_domain" -> bucket)) map {
-        case (key, value) => key + "=" + value
-      }
+      val environment =
+        if (bucket.isDefined)
+          System.getenv() + ("asset_domain" -> bucket)
+        else
+          System.getenv().toMap
+
       val process =
         runtime.exec(
           ("compass" :: "compile" :: "-e" :: "production" :: "--force" :: Nil).toArray,
-          environment.toArray,
+          environment.map { case (key, value) => key + "=" + value }.toArray,
           baseDirectory)
       val result = process.waitFor
 
@@ -371,6 +374,20 @@ package com.openstudy { package sbt {
           throw new RuntimeException("Deploy failed.")
       }
     }
+    private def withAwsConfiguration(streams: TaskStreams, access: Option[String], secret: Option[String], defaultBucket: Option[String])(deployHandler: (String,String,String)=>Unit) = {
+      val abort_? = access.isEmpty || secret.isEmpty || defaultBucket.isEmpty
+      if (access.isEmpty)
+        streams.log.error("To use AWS deployment, you must set awsAccessKey := Some(\"your AWS access key\") in your sbt build.")
+      if (secret.isEmpty)
+        streams.log.error("To use AWS deployment, you must set awsSecretKey := Some(\"your AWS secret key\") in your sbt build.")
+      if (defaultBucket.isEmpty)
+        streams.log.error("To use AWS deployment, you must set awsS3Bucket := Some(\"your S3 bucket name\") in your sbt build.")
+
+      if (abort_?)
+        throw new RuntimeException("Missing AWS info, aborting deploy. See previous errors for more information.")
+      else
+        deployHandler(access.get, secret.get, defaultBucket.get)
+    }
     def withBucketMapping(bundles:Seq[File], defaultBucket:String, customBucketMap:scala.collection.Map[String, List[String]])(deployHandler:(String, Seq[File])=>Unit) = {
       val bundlesForDefaultBucket = bundles.filterNot { (file) =>
         customBucketMap.exists { case (id, files) => files.contains(file.getName) }
@@ -385,23 +402,32 @@ package com.openstudy { package sbt {
         deployHandler(customBucketName, bundlesForBucket)
       }
     }
-    def doScriptDeploy(streams:TaskStreams, checksumInFilename:Boolean, bundleChecksums:Map[String,String], scriptBundleVersions:File, compressedTarget:File, access:String, secret:String, defaultBucket:String) = {
+    def doScriptDeploy(streams:TaskStreams, checksumInFilename:Boolean, bundleChecksums:Map[String,String], scriptBundleVersions:File, compressedTarget:File, access:Option[String], secret:Option[String], defaultBucket:Option[String]) = {
       val bundles = (compressedTarget / "javascripts" ** "*.js").get
 
-      withBucketMapping(bundles, defaultBucket, customBucketMap) { (bucketName, files) =>
-        doDeploy(streams, checksumInFilename, bundleChecksums, scriptBundleVersions, compressedTarget, files, "text/javascript", access, secret, bucketName)
+      withAwsConfiguration(streams, access, secret, defaultBucket) { (access, secret, defaultBucket) =>
+        withBucketMapping(bundles, defaultBucket, customBucketMap) { (bucketName, files) =>
+          doDeploy(streams, checksumInFilename, bundleChecksums, scriptBundleVersions, compressedTarget, files, "text/javascript", access, secret, bucketName)
+        }
       }
     }
-    def doCssDeploy(streams:TaskStreams, checksumInFilename:Boolean, bundleChecksums:Map[String,String], styleBundleVersions:File, compressedTarget:File, access:String, secret:String, defaultBucket:String) = {
+    def doCssDeploy(streams:TaskStreams, checksumInFilename:Boolean, bundleChecksums:Map[String,String], styleBundleVersions:File, compressedTarget:File, access:Option[String], secret:Option[String], defaultBucket:Option[String]) = {
       val bundles = (compressedTarget / "stylesheets" ** "*.css").get
 
-      withBucketMapping(bundles, defaultBucket, customBucketMap) { (bucketName, files) =>
-        doDeploy(streams, checksumInFilename, bundleChecksums, styleBundleVersions, compressedTarget, files, "text/css", access, secret, bucketName)
+      withAwsConfiguration(streams, access, secret, defaultBucket) { (access, secret, defaultBucket) =>
+        withBucketMapping(bundles, defaultBucket, customBucketMap) { (bucketName, files) =>
+          doDeploy(streams, checksumInFilename, bundleChecksums, styleBundleVersions, compressedTarget, files, "text/css", access, secret, bucketName)
+        }
       }
     }
 
     val resourceManagementSettings = Seq(
       checksumInFilename in ResourceCompile := false,
+
+      awsAccessKey := None,
+      awsSecretKey := None,
+      awsS3Bucket := None,
+
       bundleDirectory in ResourceCompile <<= (resourceDirectory in Compile)(_ / "bundles"),
       scriptBundle in ResourceCompile <<= (bundleDirectory in ResourceCompile)(_ / "javascript.bundle"),
       styleBundle in ResourceCompile <<= (bundleDirectory in ResourceCompile)(_ / "stylesheet.bundle"),
