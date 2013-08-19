@@ -14,7 +14,7 @@ package com.openstudy { package sbt {
 
 
   object ResourceManagementPlugin extends Plugin {
-    case class PathInformation(source:String, target:String)
+    case class PathInformation(source:String, target:String, workingDirectory: File)
     abstract class CompileResult {
       protected val runtime = java.lang.Runtime.getRuntime
 
@@ -35,12 +35,18 @@ package com.openstudy { package sbt {
     class CsCompileResult(info:PathInformation) extends CompileResult {
       protected lazy val process = runtime.exec(
         ("coffee" :: "-o" :: info.target ::
-                    "-c" :: info.source :: Nil).toArray)
+                    "-c" :: info.source :: Nil).toArray,
+        null, // inherit environment
+        info.workingDirectory
+      )
     }
     class LessCompileResult(info:PathInformation) extends CompileResult {
       protected lazy val process = {
         runtime.exec(
-        ("lessc" :: info.source :: info.target :: Nil).toArray)
+          ("lessc" :: info.source :: info.target :: Nil).toArray,
+          null, // inherit environment
+          info.workingDirectory
+        )
       }
     }
 
@@ -132,7 +138,8 @@ package com.openstudy { package sbt {
             if (targetIsDirectory)
               IO.relativize(baseDirectory, destinationDirectory).get
             else
-              IO.relativize(baseDirectory, destinationDirectory / (file.base + "." + targetExtension)).get
+              IO.relativize(baseDirectory, destinationDirectory / (file.base + "." + targetExtension)).get,
+            baseDirectory
           )
       }
 
