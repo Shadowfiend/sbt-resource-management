@@ -4,7 +4,7 @@ name := "sbt-resource-management"
 
 organization := "com.openstudy"
 
-version := "0.4-SNAPSHOT"
+version := "0.4"
 
 pomExtra :=
 <url>http://github.com/Shadowfiend/sbt-resource-management</url>
