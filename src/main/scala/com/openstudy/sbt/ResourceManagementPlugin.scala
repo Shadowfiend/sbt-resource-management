@@ -306,7 +306,7 @@ package com.openstudy { package sbt {
             (bundleName, checksum)
           }
         } catch {
-          case exception =>
+          case exception: Exception =>
             streams.log.error(exception.toString + "\n" + exception.getStackTrace.map(_.toString).mkString("\n"))
 
             throw new RuntimeException("Compression failed.")
@@ -370,13 +370,13 @@ package com.openstudy { package sbt {
 
             IO.append(bundleVersions, bundle + "=" + checksum + "\n")
           } catch {
-            case e =>
+            case e: Exception =>
               streams.log.error(e.getMessage + "\n" + e.getStackTrace.mkString("\n"))
               throw new RuntimeException("Failed to upload " + file)
           }
         }
       } catch {
-        case exception =>
+        case exception: Exception =>
           streams.log.error(exception.toString + "\n" + exception.getStackTrace.map(_.toString).mkString("\n"))
           throw new RuntimeException("Deploy failed.")
       }
