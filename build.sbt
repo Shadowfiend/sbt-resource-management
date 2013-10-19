@@ -34,6 +34,8 @@ pomExtra :=
 
 libraryDependencies += "net.java.dev.jets3t" % "jets3t" % "0.8.1"
 
+libraryDependencies += "com.yahoo.platform.yui" % "yuicompressor"  % "2.4.7"
+
 scalacOptions += "-deprecation"
 
 publishTo <<= version { (v: String) =>
