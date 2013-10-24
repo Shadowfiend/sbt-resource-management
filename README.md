@@ -15,41 +15,27 @@ requires support in the Lift app, not in sbt. More on that in a moment.
 
 ## Adding as a plugin
 
-In your project's `project/project/Plugins.scala`:
+To add sbt-resource-management to your project, add the following to your
+`project/plugins.sbt` file:
 
-```scala
-import sbt._
-
-object Plugins extends Build {
-  lazy val root              = Project("plugins", file(".")) dependsOn(resourcesPlugin)
-  lazy val resourcesPlugin   = uri("git://github.com/Shadowfiend/sbt-resource-management.git#0.1.2")
-}
-```
-
-You can use the version of sbt-resource-management that you want after
-the # sign (this can refer to a git tag or a git commit by SHA
-hash). You can also leave the hash off to track the latest version of
-the plugin. See section 1d of
-[the sbt plugin docs](https://github.com/harrah/xsbt/wiki/Plugins) for
-more information on this.
+    addSbtPlugin("com.openstudy" % "sbt-resource-management" % "0.4.1")
 
 ## Setup
 
-You just have to import the settings from this plugin:
+To get started you have to import the settings from this plugin:
 
     seq(resourceManagementSettings :_*)
 
-## AWS Setup
-Deploying to S3 requires three settings to be specified in your build.sbt:
+If you're interested in deploying your assets to S3, you need to specify
+the access key, the secret key, and the name of the bucket in your build.sbt
+file. *After* your import of the default resource management settings, add the
+following lines to set up S3 deployment.
 
-    awsAccessKey := "YOUR_ACCESS_KEY"
+    awsAccessKey := Some("YOUR_ACCESS_KEY")
   
-    awsSecretKey := "YOUR_SECRET_KEY"
+    awsSecretKey := Some("YOUR_SECRET_KEY")
 
-    awsS3Bucket  := "YOUR_S3_BUCKET"
-
-For example, at OpenStudy, our S3 bucket could be devsets.openstudy.com
-for development mode assets.
+    awsS3Bucket  := Some("YOUR_S3_BUCKET")
 
 ## Defaults
 
