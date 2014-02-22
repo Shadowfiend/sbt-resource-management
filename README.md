@@ -273,5 +273,6 @@ where we're working on changing the face of education as we know it
 using Scala, Lift, and a variety of other cool tools.
 
 Also contains contributions from Matt Farmer,
-@[farmdawgnation](http://github.com/farmdawgnation), one of the stupidly
-smart developers at OpenStudy.
+@[farmdawgnation](https://github.com/farmdawgnation) and Mike Rivera,
+@[riveramj](https://github.com/riveramj), two of the stupidly smart
+developers at [Elemica](https://github.com/elemica).
