@@ -52,7 +52,8 @@ variables that can be used to customize these:
 
 ## SASS/Compass specifics
 
-By default, Compass runs a normal `compass compile`. If you wish to force compilation every time, add the following line to your settings:
+By default, Compass runs a normal `compass compile`. If you wish to force
+compilation every time, add the following line to your settings:
 
     forceSassCompile := true
 
