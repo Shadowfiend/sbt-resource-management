@@ -96,6 +96,7 @@ package com.openstudy { package sbt {
     val scriptBundleVersions = SettingKey[File]("javascript-bundle-versions")
     val styleBundleVersions = SettingKey[File]("stylesheet-bundle-versions")
     val compressedTarget = SettingKey[File]("compressed-target")
+    val forceSassCompile = SettingKey[Boolean]("force-sass-compile")
 
     val scriptDirectories = TaskKey[Seq[File]]("javascripts-directories")
     val styleDirectories = TaskKey[Seq[File]]("stylesheets-directories")
@@ -186,7 +187,7 @@ package com.openstudy { package sbt {
       IO.copy(scriptCopyPaths, true)
     }
 
-    def doSassCompile(streams:TaskStreams, baseDirectory: File, bucket:Option[String]) = {
+    def doSassCompile(streams:TaskStreams, baseDirectory: File, bucket:Option[String], force: Boolean) = {
       streams.log.info("Compiling SASS files...")
 
       val runtime = java.lang.Runtime.getRuntime
@@ -196,9 +197,19 @@ package com.openstudy { package sbt {
         else
           System.getenv().toMap
 
+      val compassCompileCommand = {
+        val compassCompile =  ("compass" :: "compile" :: "-e" :: "production" :: Nil).toArray
+        
+        if (force) {
+          compassCompile :+ "--force"
+        } else {
+          compassCompile
+        }
+      }
+
       val process =
         runtime.exec(
-          ("compass" :: "compile" :: "-e" :: "production" :: "--force" :: Nil).toArray,
+          compassCompileCommand,
           environment.map { case (key, value) => key + "=" + value }.toArray,
           baseDirectory)
       val result = process.waitFor
@@ -434,6 +445,7 @@ package com.openstudy { package sbt {
       awsAccessKey := None,
       awsSecretKey := None,
       awsS3Bucket := None,
+      forceSassCompile := false,
 
       bundleDirectory in ResourceCompile <<= (resourceDirectory in Compile)(_ / "bundles"),
       scriptBundle in ResourceCompile <<= (bundleDirectory in ResourceCompile)(_ / "javascript.bundle"),
@@ -452,7 +464,7 @@ package com.openstudy { package sbt {
       cleanCoffeeScript in ResourceCompile <<= (streams, baseDirectory, compiledCoffeeScriptDirectory in ResourceCompile, coffeeScriptSources in ResourceCompile) map doCoffeeScriptClean _,
       compileCoffeeScript in ResourceCompile <<= (streams, baseDirectory, compiledCoffeeScriptDirectory in ResourceCompile, coffeeScriptSources in ResourceCompile) map doCoffeeScriptCompile _,
       copyScripts in ResourceCompile <<= (streams, compileCoffeeScript in ResourceCompile, compiledCoffeeScriptDirectory in ResourceCompile, scriptDirectories in ResourceCompile, targetJavaScriptDirectory in ResourceCompile) map doScriptCopy _,
-      compileSass in ResourceCompile <<= (streams, baseDirectory, awsS3Bucket) map doSassCompile _,
+      compileSass in ResourceCompile <<= (streams, baseDirectory, awsS3Bucket, forceSassCompile) map doSassCompile _,
       cleanLess in ResourceCompile <<= (streams, baseDirectory, compiledLessDirectory in ResourceCompile, lessSources in ResourceCompile) map doLessClean _,
       compileLess in ResourceCompile <<= (streams, baseDirectory, compiledLessDirectory in ResourceCompile, lessSources in ResourceCompile) map doLessCompile _,
       compressScripts in ResourceCompile <<= (streams, checksumInFilename in ResourceCompile, copyScripts in ResourceCompile, targetJavaScriptDirectory in ResourceCompile, compressedTarget in ResourceCompile, scriptBundle in ResourceCompile) map doScriptCompress _,

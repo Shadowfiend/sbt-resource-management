@@ -50,6 +50,13 @@ variables that can be used to customize these:
  - `target/compressed` for compressed JS and CSS (`compressedTarget in ResourceCompile`) (javascripts and
     stylesheets directories are created under this one for each type of file).
 
+## SASS/Compass specifics
+
+By default, Compass runs a normal `compass compile`. If you wish to force
+compilation every time, add the following line to your settings:
+
+    forceSassCompile := true
+
 ## Commands
 
 The main command for JavaScript is `sbt resources:copy-scripts`. This does two things:
@@ -266,5 +273,6 @@ where we're working on changing the face of education as we know it
 using Scala, Lift, and a variety of other cool tools.
 
 Also contains contributions from Matt Farmer,
-@[farmdawgnation](http://github.com/farmdawgnation), one of the stupidly
-smart developers at OpenStudy.
+@[farmdawgnation](https://github.com/farmdawgnation) and Mike Rivera,
+@[riveramj](https://github.com/riveramj), two of the stupidly smart
+developers at [Elemica](https://github.com/elemica).
