@@ -12,25 +12,29 @@ package com.openstudy { package sbt {
   import org.mozilla.javascript.{ErrorReporter, EvaluatorException}
   import com.yahoo.platform.yui.compressor._
 
+  case class PathInformation(source:String, target:String, workingDirectory: File)
 
-  object ResourceManagementPlugin extends Plugin {
-    case class PathInformation(source:String, target:String, workingDirectory: File)
-    abstract class CompileResult {
-      protected val runtime = java.lang.Runtime.getRuntime
+  abstract class CompileResult {
+    protected val runtime = java.lang.Runtime.getRuntime
 
-      protected def process : java.lang.Process
+    protected def process : java.lang.Process
 
-      private val result = process.waitFor
+    private val result = process.waitFor
 
-      val failed_? = result != 0
+    val failed_? = result != 0
 
-      val error =
-        if (failed_?)
-          scala.io.Source.fromInputStream(process.getErrorStream).mkString("")
-        else
-          ""
-    }
+    val error =
+      if (failed_?)
+        scala.io.Source.fromInputStream(process.getErrorStream).mkString("")
+      else
+        ""
+  }
 
+  trait HandlesCompiles {
+    def doProcessCompile(streams:TaskStreams, baseDirectory:File, destinationDirectory:File, sources:Seq[File], filetype:String, targetExtension:String, compile:(PathInformation)=>CompileResult, targetIsDirectory:Boolean = false): Unit
+  }
+
+  object ResourceManagementPlugin extends Plugin with LessCompiling {
     // The result of a CoffeeScript compile.
     class CsCompileResult(info:PathInformation) extends CompileResult {
       protected lazy val process = runtime.exec(
@@ -39,15 +43,6 @@ package com.openstudy { package sbt {
         null, // inherit environment
         info.workingDirectory
       )
-    }
-    class LessCompileResult(info:PathInformation) extends CompileResult {
-      protected lazy val process = {
-        runtime.exec(
-          ("lessc" :: info.source :: info.target :: Nil).toArray,
-          null, // inherit environment
-          info.workingDirectory
-        )
-      }
     }
 
     /**
@@ -88,7 +83,7 @@ package com.openstudy { package sbt {
     val awsS3Bucket = SettingKey[Option[String]]("aws-s3-bucket")
     val checksumInFilename = SettingKey[Boolean]("checksum-in-filename")
     val compiledCoffeeScriptDirectory = SettingKey[File]("compiled-coffee-script-directory")
-    val compiledLessDirectory = SettingKey[Option[File]]("compiled-less-directory")
+
     val targetJavaScriptDirectory = SettingKey[File]("target-java-script-directory")
     val bundleDirectory = SettingKey[File]("bundle-directory")
     val scriptBundle = SettingKey[File]("javascript-bundle")
@@ -105,9 +100,8 @@ package com.openstudy { package sbt {
     val compileCoffeeScript = TaskKey[Unit]("compile-coffee-script")
     val copyScripts = TaskKey[Unit]("copy-scripts")
     val compileSass = TaskKey[Unit]("compile-sass")
-    val lessSources = TaskKey[Seq[File]]("less-sources")
-    val cleanLess = TaskKey[Unit]("clean-less")
-    val compileLess = TaskKey[Unit]("compile-less")
+
+
     val compressScripts = TaskKey[Map[String,String]]("compress-scripts")
     val compressCss = TaskKey[Map[String,String]]("compress-styles")
     val deployScripts = TaskKey[Unit]("deploy-scripts")
@@ -223,21 +217,7 @@ package com.openstudy { package sbt {
       }
     }
 
-    def doLessClean(streams:TaskStreams, baseDiretory:File, compiledLessDir:Option[File], lessSources:Seq[File]) = {
-      compiledLessDir.map { compiledLessDir =>
-        streams.log.info("Cleaning " + lessSources.length + " generated CSS files.")
 
-        val outdatedPaths = lessSources.foreach { source =>
-          (compiledLessDir / (source.base + ".css")).delete
-        }
-      }
-    }
-
-    def doLessCompile(streams:TaskStreams, baseDirectory:File, compiledLessDir:Option[File], lessSources:Seq[File]) = {
-      compiledLessDir.map { compiledLessDir =>
-        doProcessCompile(streams, baseDirectory, compiledLessDir, lessSources, "LESS", "css", new LessCompileResult(_))
-      }
-    }
 
     def doCompress(streams:TaskStreams, checksumInFilename:Boolean, sourceDirectories:Seq[File], compressedTarget:File, bundle:File, extension:String, compressor:(Seq[String],BufferedWriter,ExceptionErrorReporter)=>Unit) : Map[String,String] = {
       if (bundle.exists) {
