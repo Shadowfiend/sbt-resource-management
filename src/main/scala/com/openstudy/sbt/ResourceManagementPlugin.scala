@@ -7,7 +7,7 @@ package com.openstudy { package sbt {
 
   import com.yahoo.platform.yui.compressor._
 
-  object ResourceManagementPlugin extends Plugin with SassCompiling with LessCompiling with CoffeeScriptCompiling with ScriptCompressing {
+  object ResourceManagementPlugin extends Plugin with SassCompiling with LessCompiling with CoffeeScriptCompiling with ScriptCompressing with CssCompressing {
     val ResourceCompile = config("resources")
 
     private val webappResourceAlias = SettingKey[Seq[File]]("webapp-resources")
@@ -27,7 +27,6 @@ package com.openstudy { package sbt {
     val scriptDirectories = TaskKey[Seq[File]]("javascripts-directories")
     val styleDirectories = TaskKey[Seq[File]]("stylesheets-directories")
     val copyScripts = TaskKey[Unit]("copy-scripts")
-    val compressCss = TaskKey[Map[String,String]]("compress-styles")
     val deployScripts = TaskKey[Unit]("deploy-scripts")
     val deployCss = TaskKey[Unit]("deploy-styles")
     val deployResources = TaskKey[Unit]("deploy-resources")
@@ -54,15 +53,6 @@ package com.openstudy { package sbt {
         scriptDirectories.foldLeft(List[(File,File)]())(_ ++ copyPathsForDirectory(_))
       streams.log.info("Copying " + scriptCopyPaths.length + " JavaScript files...")
       IO.copy(scriptCopyPaths, true)
-    }
-
-    def doCssCompress(streams:TaskStreams, checksumInFilename:Boolean, compileSass:Unit, styleDirectories:Seq[File], compressedTarget:File, styleBundle:File) = {
-      doCompress(streams, checksumInFilename, styleDirectories, compressedTarget / "stylesheets", styleBundle, "css", { (fileContents, writer, reporter) =>
-        val compressor =
-          new CssCompressor(new StringReader(fileContents.mkString("")))
-
-        compressor.compress(writer, defaultCompressionOptions.lineBreakPos)
-      })
     }
 
     def doDeploy(streams:TaskStreams, checksumInFilename:Boolean, bundleChecksums:Map[String,String], bundleVersions:File, baseCompressedTarget:File, files:Seq[File], mimeType:String, access:String, secret:String, bucket:String) = {
