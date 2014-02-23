@@ -243,7 +243,7 @@ package com.openstudy { package sbt {
       if (bundle.exists) {
         try {
           val bundles = Map[String,List[String]]() ++
-            IO.read(bundle, Charset.forName("UTF-8")).replaceAll("""(/n){3,}""","/n/n").split("\n\n").flatMap { section =>
+            IO.read(bundle, Charset.forName("UTF-8")).replaceAll("""(\n){3,}""","\n\n").split("\n\n").flatMap { section =>
               val lines = section.split("\n").toList
 
               if (lines.length >= 1) {
