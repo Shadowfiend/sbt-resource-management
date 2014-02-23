@@ -5,7 +5,7 @@ package com.openstudy { package sbt {
   import _root_.sbt.{File => SbtFile, _}
   import Keys.{baseDirectory, resourceDirectory, streams, target, _}
 
-  object ResourceManagementPlugin extends Plugin with SassCompiling with LessCompiling with CoffeeScriptCompiling with ScriptCompressing with CssCompressing with Deploying {
+  object ResourceManagementPlugin extends Plugin with SassCompiling with LessCompiling with CoffeeScriptCompiling with ScriptCompressing with CssCompressing with CssDeploying {
     val ResourceCompile = config("resources")
 
     private val webappResourceAlias = SettingKey[Seq[File]]("webapp-resources")
@@ -26,7 +26,6 @@ package com.openstudy { package sbt {
     val styleDirectories = TaskKey[Seq[File]]("stylesheets-directories")
     val copyScripts = TaskKey[Unit]("copy-scripts")
     val deployScripts = TaskKey[Unit]("deploy-scripts")
-    val deployCss = TaskKey[Unit]("deploy-styles")
 
     val customBucketMap = scala.collection.mutable.HashMap[String, List[String]]()
 
@@ -58,15 +57,6 @@ package com.openstudy { package sbt {
       withAwsConfiguration(streams, access, secret, defaultBucket) { (access, secret, defaultBucket) =>
         withBucketMapping(bundles, defaultBucket, customBucketMap) { (bucketName, files) =>
           doDeploy(streams, checksumInFilename, bundleChecksums, scriptBundleVersions, compressedTarget, files, "text/javascript", access, secret, bucketName)
-        }
-      }
-    }
-    def doCssDeploy(streams:TaskStreams, checksumInFilename:Boolean, bundleChecksums:Map[String,String], styleBundleVersions:File, compressedTarget:File, access:Option[String], secret:Option[String], defaultBucket:Option[String]) = {
-      val bundles = (compressedTarget / "stylesheets" ** "*.css").get
-
-      withAwsConfiguration(streams, access, secret, defaultBucket) { (access, secret, defaultBucket) =>
-        withBucketMapping(bundles, defaultBucket, customBucketMap) { (bucketName, files) =>
-          doDeploy(streams, checksumInFilename, bundleChecksums, styleBundleVersions, compressedTarget, files, "text/css", access, secret, bucketName)
         }
       }
     }
