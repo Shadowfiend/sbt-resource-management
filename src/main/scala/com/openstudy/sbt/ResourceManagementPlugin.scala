@@ -5,7 +5,7 @@ package com.openstudy { package sbt {
   import _root_.sbt.{File => SbtFile, _}
   import Keys.{baseDirectory, resourceDirectory, streams, target, _}
 
-  object ResourceManagementPlugin extends Plugin with SassCompiling with LessCompiling with CoffeeScriptCompiling with ScriptCompressing with CssCompressing with CssDeploying {
+  object ResourceManagementPlugin extends Plugin with SassCompiling with LessCompiling with CoffeeScriptCompiling with ScriptCompressing with CssCompressing with CssDeploying with ScriptDeploying {
     val ResourceCompile = config("resources")
 
     private val webappResourceAlias = SettingKey[Seq[File]]("webapp-resources")
@@ -25,7 +25,6 @@ package com.openstudy { package sbt {
     val scriptDirectories = TaskKey[Seq[File]]("javascripts-directories")
     val styleDirectories = TaskKey[Seq[File]]("stylesheets-directories")
     val copyScripts = TaskKey[Unit]("copy-scripts")
-    val deployScripts = TaskKey[Unit]("deploy-scripts")
 
     val customBucketMap = scala.collection.mutable.HashMap[String, List[String]]()
 
@@ -49,16 +48,6 @@ package com.openstudy { package sbt {
         scriptDirectories.foldLeft(List[(File,File)]())(_ ++ copyPathsForDirectory(_))
       streams.log.info("Copying " + scriptCopyPaths.length + " JavaScript files...")
       IO.copy(scriptCopyPaths, true)
-    }
-
-    def doScriptDeploy(streams:TaskStreams, checksumInFilename:Boolean, bundleChecksums:Map[String,String], scriptBundleVersions:File, compressedTarget:File, access:Option[String], secret:Option[String], defaultBucket:Option[String]) = {
-      val bundles = (compressedTarget / "javascripts" ** "*.js").get
-
-      withAwsConfiguration(streams, access, secret, defaultBucket) { (access, secret, defaultBucket) =>
-        withBucketMapping(bundles, defaultBucket, customBucketMap) { (bucketName, files) =>
-          doDeploy(streams, checksumInFilename, bundleChecksums, scriptBundleVersions, compressedTarget, files, "text/javascript", access, secret, bucketName)
-        }
-      }
     }
 
     val resourceManagementSettings = Seq(
