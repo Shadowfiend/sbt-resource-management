@@ -6,7 +6,7 @@ import java.io._
 import _root_.sbt.{File => SbtFile, _}
 import Keys.{baseDirectory, resourceDirectory, streams, target, _}
 
-trait LessCompiling extends HandlesCompiles {
+trait LessCompiling extends Compiling {
   val compiledLessDirectory = SettingKey[Option[File]]("compiled-less-directory")
   val lessSources = TaskKey[Seq[File]]("less-sources")
   val cleanLess = TaskKey[Unit]("clean-less")

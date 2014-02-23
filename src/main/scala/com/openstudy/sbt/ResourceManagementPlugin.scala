@@ -12,28 +12,6 @@ package com.openstudy { package sbt {
   import org.mozilla.javascript.{ErrorReporter, EvaluatorException}
   import com.yahoo.platform.yui.compressor._
 
-  case class PathInformation(source:String, target:String, workingDirectory: File)
-
-  abstract class CompileResult {
-    protected val runtime = java.lang.Runtime.getRuntime
-
-    protected def process : java.lang.Process
-
-    private val result = process.waitFor
-
-    val failed_? = result != 0
-
-    val error =
-      if (failed_?)
-        scala.io.Source.fromInputStream(process.getErrorStream).mkString("")
-      else
-        ""
-  }
-
-  trait HandlesCompiles {
-    def doProcessCompile(streams:TaskStreams, baseDirectory:File, destinationDirectory:File, sources:Seq[File], filetype:String, targetExtension:String, compile:(PathInformation)=>CompileResult, targetIsDirectory:Boolean = false): Unit
-  }
-
   object ResourceManagementPlugin extends Plugin with LessCompiling with CoffeeScriptCompiling {
     /**
      * Handles all JS errors by throwing an exception. This can then get caught
@@ -98,41 +76,6 @@ package com.openstudy { package sbt {
 
     val customBucketMap = scala.collection.mutable.HashMap[String, List[String]]()
 
-    def doProcessCompile(streams:TaskStreams, baseDirectory:File, destinationDirectory:File, sources:Seq[File], filetype:String, targetExtension:String, compile:(PathInformation)=>CompileResult, targetIsDirectory:Boolean = false) = {
-      def outdated_?(source:File) = {
-        val target = destinationDirectory / (source.base + "." + targetExtension)
-
-        source.lastModified() > target.lastModified()
-      }
-      val outdatedPaths = sources.collect {
-        case file if outdated_?(file) =>
-          PathInformation(
-            IO.relativize(baseDirectory, file).get,
-            if (targetIsDirectory)
-              IO.relativize(baseDirectory, destinationDirectory).get
-            else
-              IO.relativize(baseDirectory, destinationDirectory / (file.base + "." + targetExtension)).get,
-            baseDirectory
-          )
-      }
-
-      if (outdatedPaths.length > 0) {
-        streams.log.info(
-          "Compiling " + outdatedPaths.length + " " + filetype + " sources to " +
-          destinationDirectory + "..."
-        )
-
-        val failures = outdatedPaths.collect {
-          case pathInfo => compile(pathInfo)
-        }.partition(_.failed_?)._1.map(_.error)
-
-        if (failures.length != 0) {
-          streams.log.error(failures.mkString("\n"))
-          throw new RuntimeException(filetype + " compilation failed.")
-        }
-      }
-    }
-
     def doScriptCopy(streams:TaskStreams, coffeeScriptCompile:Unit, compiledCsDir:File, scriptDirectories:Seq[File], targetJSDir:File) = {
       def copyPathsForDirectory(directory:File) = {
         for {
@@ -190,8 +133,6 @@ package com.openstudy { package sbt {
         streams.log.info("Done.")
       }
     }
-
-
 
     def doCompress(streams:TaskStreams, checksumInFilename:Boolean, sourceDirectories:Seq[File], compressedTarget:File, bundle:File, extension:String, compressor:(Seq[String],BufferedWriter,ExceptionErrorReporter)=>Unit) : Map[String,String] = {
       if (bundle.exists) {
