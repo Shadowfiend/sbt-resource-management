@@ -12,7 +12,7 @@ package com.openstudy { package sbt {
   import org.mozilla.javascript.{ErrorReporter, EvaluatorException}
   import com.yahoo.platform.yui.compressor._
 
-  object ResourceManagementPlugin extends Plugin with LessCompiling with CoffeeScriptCompiling {
+  object ResourceManagementPlugin extends Plugin with SassCompiling with LessCompiling with CoffeeScriptCompiling {
     /**
      * Handles all JS errors by throwing an exception. This can then get caught
      * and turned into a Failure. in the masher.
@@ -58,12 +58,11 @@ package com.openstudy { package sbt {
     val scriptBundleVersions = SettingKey[File]("javascript-bundle-versions")
     val styleBundleVersions = SettingKey[File]("stylesheet-bundle-versions")
     val compressedTarget = SettingKey[File]("compressed-target")
-    val forceSassCompile = SettingKey[Boolean]("force-sass-compile")
 
     val scriptDirectories = TaskKey[Seq[File]]("javascripts-directories")
     val styleDirectories = TaskKey[Seq[File]]("stylesheets-directories")
     val copyScripts = TaskKey[Unit]("copy-scripts")
-    val compileSass = TaskKey[Unit]("compile-sass")
+
 
 
     val compressScripts = TaskKey[Map[String,String]]("compress-scripts")
@@ -96,42 +95,6 @@ package com.openstudy { package sbt {
         scriptDirectories.foldLeft(List[(File,File)]())(_ ++ copyPathsForDirectory(_))
       streams.log.info("Copying " + scriptCopyPaths.length + " JavaScript files...")
       IO.copy(scriptCopyPaths, true)
-    }
-
-    def doSassCompile(streams:TaskStreams, baseDirectory: File, bucket:Option[String], force: Boolean) = {
-      streams.log.info("Compiling SASS files...")
-
-      val runtime = java.lang.Runtime.getRuntime
-      val environment =
-        if (bucket.isDefined)
-          System.getenv() + ("asset_domain" -> bucket)
-        else
-          System.getenv().toMap
-
-      val compassCompileCommand = {
-        val compassCompile =  ("compass" :: "compile" :: "-e" :: "production" :: Nil).toArray
-        
-        if (force) {
-          compassCompile :+ "--force"
-        } else {
-          compassCompile
-        }
-      }
-
-      val process =
-        runtime.exec(
-          compassCompileCommand,
-          environment.map { case (key, value) => key + "=" + value }.toArray,
-          baseDirectory)
-      val result = process.waitFor
-
-      if (result != 0) {
-        streams.log.error(
-          scala.io.Source.fromInputStream(process.getErrorStream).mkString(""))
-        throw new RuntimeException("SASS compilation failed with code " + result + ".")
-      } else {
-        streams.log.info("Done.")
-      }
     }
 
     def doCompress(streams:TaskStreams, checksumInFilename:Boolean, sourceDirectories:Seq[File], compressedTarget:File, bundle:File, extension:String, compressor:(Seq[String],BufferedWriter,ExceptionErrorReporter)=>Unit) : Map[String,String] = {
