@@ -18,7 +18,7 @@ requires support in the Lift app, not in sbt. More on that in a moment.
 To add sbt-resource-management to your project, add the following to your
 `project/plugins.sbt` file:
 
-    addSbtPlugin("com.openstudy" % "sbt-resource-management" % "0.4.2")
+    addSbtPlugin("com.openstudy" % "sbt-resource-management" % "0.4.3-SNAPSHOT")
 
 ## Setup
 
