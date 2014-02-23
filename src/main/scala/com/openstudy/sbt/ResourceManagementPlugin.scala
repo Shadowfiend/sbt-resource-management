@@ -34,17 +34,7 @@ package com.openstudy { package sbt {
     def doProcessCompile(streams:TaskStreams, baseDirectory:File, destinationDirectory:File, sources:Seq[File], filetype:String, targetExtension:String, compile:(PathInformation)=>CompileResult, targetIsDirectory:Boolean = false): Unit
   }
 
-  object ResourceManagementPlugin extends Plugin with LessCompiling {
-    // The result of a CoffeeScript compile.
-    class CsCompileResult(info:PathInformation) extends CompileResult {
-      protected lazy val process = runtime.exec(
-        ("coffee" :: "-o" :: info.target ::
-                    "-c" :: info.source :: Nil).toArray,
-        null, // inherit environment
-        info.workingDirectory
-      )
-    }
-
+  object ResourceManagementPlugin extends Plugin with LessCompiling with CoffeeScriptCompiling {
     /**
      * Handles all JS errors by throwing an exception. This can then get caught
      * and turned into a Failure. in the masher.
@@ -82,7 +72,6 @@ package com.openstudy { package sbt {
     val awsSecretKey = SettingKey[Option[String]]("aws-secret-key")
     val awsS3Bucket = SettingKey[Option[String]]("aws-s3-bucket")
     val checksumInFilename = SettingKey[Boolean]("checksum-in-filename")
-    val compiledCoffeeScriptDirectory = SettingKey[File]("compiled-coffee-script-directory")
 
     val targetJavaScriptDirectory = SettingKey[File]("target-java-script-directory")
     val bundleDirectory = SettingKey[File]("bundle-directory")
@@ -95,9 +84,6 @@ package com.openstudy { package sbt {
 
     val scriptDirectories = TaskKey[Seq[File]]("javascripts-directories")
     val styleDirectories = TaskKey[Seq[File]]("stylesheets-directories")
-    val coffeeScriptSources = TaskKey[Seq[File]]("coffee-script-sources")
-    val cleanCoffeeScript = TaskKey[Unit]("clean-coffee-script")
-    val compileCoffeeScript = TaskKey[Unit]("compile-coffee-script")
     val copyScripts = TaskKey[Unit]("copy-scripts")
     val compileSass = TaskKey[Unit]("compile-sass")
 
@@ -111,14 +97,6 @@ package com.openstudy { package sbt {
     val mashScripts = TaskKey[Unit]("mash-scripts")
 
     val customBucketMap = scala.collection.mutable.HashMap[String, List[String]]()
-
-    def doCoffeeScriptClean(streams:TaskStreams, baseDiretory:File, compiledCsDir:File, csSources:Seq[File]) = {
-      streams.log.info("Cleaning " + csSources.length + " generated JavaScript files.")
-
-      val outdatedPaths = csSources.foreach { source =>
-        (compiledCsDir / (source.base + ".js")).delete
-      }
-    }
 
     def doProcessCompile(streams:TaskStreams, baseDirectory:File, destinationDirectory:File, sources:Seq[File], filetype:String, targetExtension:String, compile:(PathInformation)=>CompileResult, targetIsDirectory:Boolean = false) = {
       def outdated_?(source:File) = {
@@ -153,10 +131,6 @@ package com.openstudy { package sbt {
           throw new RuntimeException(filetype + " compilation failed.")
         }
       }
-    }
-
-    def doCoffeeScriptCompile(streams:TaskStreams, baseDirectory:File, compiledCsDir:File, csSources:Seq[File]) = {
-      doProcessCompile(streams, baseDirectory, compiledCsDir, csSources, "CoffeeScript", "js", new CsCompileResult(_), targetIsDirectory = true)
     }
 
     def doScriptCopy(streams:TaskStreams, coffeeScriptCompile:Unit, compiledCsDir:File, scriptDirectories:Seq[File], targetJSDir:File) = {
