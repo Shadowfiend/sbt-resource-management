@@ -2,46 +2,12 @@ package com.openstudy { package sbt {
   import scala.collection.JavaConversions._
 
   import java.io._
-  import java.math.BigInteger
-  import java.nio.charset.Charset
-  import java.security.MessageDigest
-
   import _root_.sbt.{File => SbtFile, _}
   import Keys.{baseDirectory, resourceDirectory, streams, target, _}
 
-  import org.mozilla.javascript.{ErrorReporter, EvaluatorException}
   import com.yahoo.platform.yui.compressor._
 
-  object ResourceManagementPlugin extends Plugin with SassCompiling with LessCompiling with CoffeeScriptCompiling {
-    /**
-     * Handles all JS errors by throwing an exception. This can then get caught
-     * and turned into a Failure. in the masher.
-     */
-    class ExceptionErrorReporter(streams:TaskStreams, filename:String) extends ErrorReporter {
-      def throwExceptionWith(message:String, file:String, line:Int) = {
-        streams.log.info("Compressor failed at: " + filename + ":" + line + "; said: " + message)
-        throw new Exception("Compressor failed at: " + file + ":" + line + "; said: " + message)
-      }
-
-      def warning(message:String, file:String, line:Int, lineSource:String, lineOffset:Int) = {
-        throwExceptionWith(message, file, line)
-      }
-
-      def error(message:String, file:String, line:Int, lineSource:String, lineOffset:Int) = {
-        throwExceptionWith(message, file, line)
-      }
-
-      def runtimeError(message:String, file:String, line:Int, lineSource:String, lineOffset:Int) : EvaluatorException = {
-        throwExceptionWith(message, file, line)
-      }
-    }
-
-    case class JSCompressionOptions(
-      charset:String, lineBreakPos:Int,
-      munge:Boolean, verbose:Boolean,
-      preserveSemicolons:Boolean, disableOptimizations:Boolean)
-    val defaultCompressionOptions = JSCompressionOptions("utf-8", -1, true, false, false, false)
-
+  object ResourceManagementPlugin extends Plugin with SassCompiling with LessCompiling with CoffeeScriptCompiling with ScriptCompressing {
     val ResourceCompile = config("resources")
 
     private val webappResourceAlias = SettingKey[Seq[File]]("webapp-resources")
@@ -57,21 +23,14 @@ package com.openstudy { package sbt {
     val styleBundle = SettingKey[File]("stylesheet-bundle")
     val scriptBundleVersions = SettingKey[File]("javascript-bundle-versions")
     val styleBundleVersions = SettingKey[File]("stylesheet-bundle-versions")
-    val compressedTarget = SettingKey[File]("compressed-target")
 
     val scriptDirectories = TaskKey[Seq[File]]("javascripts-directories")
     val styleDirectories = TaskKey[Seq[File]]("stylesheets-directories")
     val copyScripts = TaskKey[Unit]("copy-scripts")
-
-
-
-    val compressScripts = TaskKey[Map[String,String]]("compress-scripts")
     val compressCss = TaskKey[Map[String,String]]("compress-styles")
     val deployScripts = TaskKey[Unit]("deploy-scripts")
     val deployCss = TaskKey[Unit]("deploy-styles")
-    val compressResources = TaskKey[Unit]("compress-resources")
     val deployResources = TaskKey[Unit]("deploy-resources")
-    val mashScripts = TaskKey[Unit]("mash-scripts")
 
     val customBucketMap = scala.collection.mutable.HashMap[String, List[String]]()
 
@@ -97,116 +56,6 @@ package com.openstudy { package sbt {
       IO.copy(scriptCopyPaths, true)
     }
 
-    def doCompress(streams:TaskStreams, checksumInFilename:Boolean, sourceDirectories:Seq[File], compressedTarget:File, bundle:File, extension:String, compressor:(Seq[String],BufferedWriter,ExceptionErrorReporter)=>Unit) : Map[String,String] = {
-      if (bundle.exists) {
-        try {
-          val bundles = Map[String,List[String]]() ++
-            IO.read(bundle, Charset.forName("UTF-8")).replaceAll("""(\n){3,}""","\n\n").split("\n\n").flatMap { section =>
-              val lines = section.split("\n").toList
-
-              if (lines.length >= 1) {
-                // "bundlename->customBucketName"
-                lines(0).split("->").toList match {
-                  case bundleId :: customBundleTarget =>
-                    customBundleTarget.headOption.foreach { bundleTarget =>
-                      val filesForBucket = customBucketMap.getOrElseUpdate(bundleTarget, List()) ++ List(bundleId + "." + extension)
-                      customBucketMap.put(bundleTarget, filesForBucket)
-                    }
-
-                    Some(bundleId -> lines.drop(1))
-
-                  case _ =>
-                    None
-                }
-              } else {
-                streams.log.warn("Found a bundle with no name/content.")
-                None
-              }
-            }
-
-          def contentsForBundle(bundleName:String, filesAndBundles:Option[List[String]] = None) : List[String] = {
-            (filesAndBundles orElse bundles.get(bundleName)).toList.flatMap { filesAndBundles =>
-              filesAndBundles.flatMap { fileOrBundleName =>
-                if (fileOrBundleName.contains(".")) {
-                  // If it contains a ., we consider it a filename.
-                  val matchingFiles = fileOrBundleName.split("/").foldLeft(sourceDirectories:PathFinder)(_ * _)
-                  for (file <- matchingFiles.get) yield {
-                    IO.read(file, Charset.forName("UTF-8"))
-                  }
-                } else {
-                  // With no ., we consider it a bundle name.
-                  contentsForBundle(fileOrBundleName)
-                }
-              }
-            }
-          }
-
-          IO.delete(compressedTarget)
-          streams.log.info("  Found " + bundles.size + " " + extension + " bundles.")
-          for {
-            (bundleName, filesAndBundles) <- bundles
-          } yield {
-            streams.log.info("    Bundling " + filesAndBundles.length + " files and bundles into bundle " + bundleName + "...")
-            val contentsToCompress = contentsForBundle(bundleName)
-
-            IO.createDirectory(compressedTarget)
-            val stringWriter = new StringWriter
-            val bufferedWriter = new BufferedWriter(stringWriter)
-            compressor(contentsToCompress, bufferedWriter,
-                       new ExceptionErrorReporter(streams, bundleName))
-
-            bufferedWriter.flush()
-            val compressedContents = stringWriter.toString()
-            // Preliminary research shows this doesn't really produce the same output
-            // as say the md5sum program, but we don't care, we just want a nice
-            // filename.
-            val digestBytes =
-              MessageDigest.getInstance("MD5").digest(compressedContents.getBytes("UTF-8"))
-            val checksum = new BigInteger(1, digestBytes).toString(16)
-
-            val filename =
-              if (checksumInFilename)
-                bundleName + "-" + checksum
-              else
-                bundleName
-
-            IO.writer(compressedTarget / (filename + "." + extension), "", Charset.forName("UTF-8"), false)(_.append(compressedContents))
-
-            (bundleName, checksum)
-          }
-        } catch {
-          case exception: Exception =>
-            streams.log.error(exception.toString + "\n" + exception.getStackTrace.map(_.toString).mkString("\n"))
-
-            throw new RuntimeException("Compression failed.")
-        }
-      } else {
-        streams.log.warn("Couldn't find " + bundle.absolutePath + "; not generating any bundles.")
-
-        Map()
-      }
-    }
-
-    def doScriptCompress(streams:TaskStreams, checksumInFilename:Boolean, copyScripts:Unit, targetJsDirectory:File, compressedTarget:File, scriptBundle:File) = {
-      doCompress(streams, checksumInFilename, List(targetJsDirectory), compressedTarget / "javascripts", scriptBundle, "js", { (fileContents, writer, reporter) =>
-        val compressor =
-          new JavaScriptCompressor(
-            new StringReader(fileContents.mkString(";\n")),
-            reporter)
-
-        compressor.compress(writer,
-          defaultCompressionOptions.lineBreakPos, defaultCompressionOptions.munge,
-          defaultCompressionOptions.verbose, defaultCompressionOptions.preserveSemicolons,
-          defaultCompressionOptions.disableOptimizations)
-      })
-    }
-    def doScriptMash(streams:TaskStreams, checksumInFilename:Boolean, copyScripts:Unit, targetJsDirectory:File, compressedTarget:File, scriptBundle:File) = {
-      doCompress(streams, checksumInFilename, List(targetJsDirectory), compressedTarget / "javascripts", scriptBundle, "js", { (fileContents, writer, reporter) =>
-        val mashedScript = fileContents.mkString(";\n")
-
-        writer.write(mashedScript, 0, mashedScript.length)
-      })
-    }
     def doCssCompress(streams:TaskStreams, checksumInFilename:Boolean, compileSass:Unit, styleDirectories:Seq[File], compressedTarget:File, styleBundle:File) = {
       doCompress(streams, checksumInFilename, styleDirectories, compressedTarget / "stylesheets", styleBundle, "css", { (fileContents, writer, reporter) =>
         val compressor =
