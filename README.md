@@ -18,7 +18,7 @@ requires support in the Lift app, not in sbt. More on that in a moment.
 To add sbt-resource-management to your project, add the following to your
 `project/plugins.sbt` file:
 
-    addSbtPlugin("com.openstudy" % "sbt-resource-management" % "0.4.1")
+    addSbtPlugin("com.openstudy" % "sbt-resource-management" % "0.4.2-SNAPSHOT")
 
 ## Setup
 
@@ -52,7 +52,8 @@ variables that can be used to customize these:
 
 ## SASS/Compass specifics
 
-By default, Compass runs a normal `compass compile`. If you wish to force compilation every time, add the following line to your settings:
+By default, Compass runs a normal `compass compile`. If you wish to force
+compilation every time, add the following line to your settings:
 
     forceSassCompile := true
 
@@ -272,5 +273,6 @@ where we're working on changing the face of education as we know it
 using Scala, Lift, and a variety of other cool tools.
 
 Also contains contributions from Matt Farmer,
-@[farmdawgnation](http://github.com/farmdawgnation), one of the stupidly
-smart developers at OpenStudy.
+@[farmdawgnation](https://github.com/farmdawgnation) and Mike Rivera,
+@[riveramj](https://github.com/riveramj), two of the stupidly smart
+developers at [Elemica](https://github.com/elemica).

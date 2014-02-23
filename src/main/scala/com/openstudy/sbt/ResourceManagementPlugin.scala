@@ -198,9 +198,9 @@ package com.openstudy { package sbt {
           System.getenv().toMap
 
       val compassCompileCommand = {
-        val compassCompile =  ("compass" :: "compile" :: "-e" :: "production" :: "--force" :: Nil).toArray
+        val compassCompile =  ("compass" :: "compile" :: "-e" :: "production" :: Nil).toArray
         
-        if (force == true) {
+        if (force) {
           compassCompile :+ "--force"
         } else {
           compassCompile
