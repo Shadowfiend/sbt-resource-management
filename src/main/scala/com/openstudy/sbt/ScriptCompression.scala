@@ -8,7 +8,7 @@ import Keys.{baseDirectory, resourceDirectory, streams, target, _}
 
 import com.yahoo.platform.yui.compressor._
 
-trait ScriptCompressing extends Compressing {
+trait ScriptCompression extends Compression {
   val compressScripts = TaskKey[Map[String,String]]("compress-scripts")
   val mashScripts = TaskKey[Unit]("mash-scripts")
 

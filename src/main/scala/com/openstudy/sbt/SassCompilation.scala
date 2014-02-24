@@ -7,7 +7,7 @@ import java.io._
 import _root_.sbt.{File => SbtFile, _}
 import Keys.{baseDirectory, resourceDirectory, streams, target, _}
 
-trait SassCompiling extends Compiling {
+trait SassCompilation extends Compilation {
   val forceSassCompile = SettingKey[Boolean]("force-sass-compile")
   val compileSass = TaskKey[Unit]("compile-sass")
 

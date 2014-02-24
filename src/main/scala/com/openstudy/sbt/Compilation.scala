@@ -24,7 +24,7 @@ abstract class CompileResult {
       ""
 }
 
-trait Compiling {
+trait Compilation {
   def doProcessCompile(streams:TaskStreams, baseDirectory:File, destinationDirectory:File, sources:Seq[File], filetype:String, targetExtension:String, compile:(PathInformation)=>CompileResult, targetIsDirectory:Boolean = false) = {
     def outdated_?(source:File) = {
       val target = destinationDirectory / (source.base + "." + targetExtension)

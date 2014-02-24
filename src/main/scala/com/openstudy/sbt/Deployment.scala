@@ -6,7 +6,7 @@ import java.io._
 import _root_.sbt.{File => SbtFile, _}
 import Keys.{baseDirectory, resourceDirectory, streams, target, _}
 
-trait Deploying {
+trait Deployment {
   val deployResources = TaskKey[Unit]("deploy-resources")
 
   def customBucketMap: scala.collection.mutable.HashMap[String, List[String]]

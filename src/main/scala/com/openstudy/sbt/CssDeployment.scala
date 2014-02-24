@@ -6,7 +6,7 @@ import java.io._
 import _root_.sbt.{File => SbtFile, _}
 import Keys.{baseDirectory, resourceDirectory, streams, target, _}
 
-trait CssDeploying extends Deploying {
+trait CssDeployment extends Deployment {
   val deployCss = TaskKey[Unit]("deploy-styles")
 
   def doCssDeploy(streams:TaskStreams, checksumInFilename:Boolean, bundleChecksums:Map[String,String], styleBundleVersions:File, compressedTarget:File, access:Option[String], secret:Option[String], defaultBucket:Option[String]) = {

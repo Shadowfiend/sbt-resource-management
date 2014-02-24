@@ -5,7 +5,14 @@ package com.openstudy { package sbt {
   import _root_.sbt.{File => SbtFile, _}
   import Keys.{baseDirectory, resourceDirectory, streams, target, _}
 
-  object ResourceManagementPlugin extends Plugin with SassCompiling with LessCompiling with CoffeeScriptCompiling with ScriptCompressing with CssCompressing with CssDeploying with ScriptDeploying {
+  object ResourceManagementPlugin extends Plugin
+      with SassCompilation
+      with LessCompilation
+      with CoffeeScriptCompilation
+      with ScriptCompression
+      with CssCompression
+      with CssDeployment
+      with ScriptDeployment {
     val ResourceCompile = config("resources")
 
     private val webappResourceAlias = SettingKey[Seq[File]]("webapp-resources")

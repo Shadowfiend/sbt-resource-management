@@ -6,7 +6,7 @@ import java.io._
 import _root_.sbt.{File => SbtFile, _}
 import Keys.{baseDirectory, resourceDirectory, streams, target, _}
 
-trait CoffeeScriptCompiling extends Compiling {
+trait CoffeeScriptCompilation extends Compilation {
   val compiledCoffeeScriptDirectory = SettingKey[File]("compiled-coffee-script-directory")
   val coffeeScriptSources = TaskKey[Seq[File]]("coffee-script-sources")
   val cleanCoffeeScript = TaskKey[Unit]("clean-coffee-script")

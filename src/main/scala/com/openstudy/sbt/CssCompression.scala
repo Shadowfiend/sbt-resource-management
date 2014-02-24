@@ -8,7 +8,7 @@ import Keys.{baseDirectory, resourceDirectory, streams, target, _}
 
 import com.yahoo.platform.yui.compressor._
 
-trait CssCompressing extends Compressing {
+trait CssCompression extends Compression {
   val compressCss = TaskKey[Map[String,String]]("compress-styles")
 
   def doCssCompress(streams:TaskStreams, checksumInFilename:Boolean, compileSass:Unit, styleDirectories:Seq[File], compressedTarget:File, styleBundle:File) = {

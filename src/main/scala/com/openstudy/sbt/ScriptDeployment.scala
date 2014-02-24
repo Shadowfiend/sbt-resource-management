@@ -6,7 +6,7 @@ import java.io._
 import _root_.sbt.{File => SbtFile, _}
 import Keys.{baseDirectory, resourceDirectory, streams, target, _}
 
-trait ScriptDeploying extends Deploying {
+trait ScriptDeployment extends Deployment {
   val deployScripts = TaskKey[Unit]("deploy-scripts")
 
   def doScriptDeploy(streams:TaskStreams, checksumInFilename:Boolean, bundleChecksums:Map[String,String], scriptBundleVersions:File, compressedTarget:File, access:Option[String], secret:Option[String], defaultBucket:Option[String]) = {

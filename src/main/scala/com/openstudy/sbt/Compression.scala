@@ -39,7 +39,7 @@ case class JSCompressionOptions(
   munge:Boolean, verbose:Boolean,
   preserveSemicolons:Boolean, disableOptimizations:Boolean)
 
-trait Compressing {
+trait Compression {
   val compressedTarget = SettingKey[File]("compressed-target")
   val compressResources = TaskKey[Unit]("compress-resources")
 
