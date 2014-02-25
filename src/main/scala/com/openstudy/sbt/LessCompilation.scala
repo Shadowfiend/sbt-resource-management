@@ -12,7 +12,7 @@ trait LessCompilation extends Compilation {
   val cleanLess = TaskKey[Unit]("clean-less")
   val compileLess = TaskKey[Unit]("compile-less")
 
-  class LessCompileResult(info:PathInformation) extends CompileResult {
+  class LessCompilationResult(info:PathInformation) extends CompilationResult {
     protected lazy val process = {
       runtime.exec(
         ("lessc" :: info.source :: info.target :: Nil).toArray,
@@ -24,7 +24,7 @@ trait LessCompilation extends Compilation {
 
   def doLessCompile(streams:TaskStreams, baseDirectory:File, compiledLessDir:Option[File], lessSources:Seq[File]) = {
     compiledLessDir.map { compiledLessDir =>
-      doProcessCompile(streams, baseDirectory, compiledLessDir, lessSources, "LESS", "css", new LessCompileResult(_))
+      doProcessCompile(streams, baseDirectory, compiledLessDir, lessSources, "LESS", "css", new LessCompilationResult(_))
     }
   }
 

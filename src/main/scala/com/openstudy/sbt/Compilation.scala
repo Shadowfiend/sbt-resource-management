@@ -8,7 +8,7 @@ import Keys.{baseDirectory, resourceDirectory, streams, target, _}
 
 case class PathInformation(source:String, target:String, workingDirectory: File)
 
-abstract class CompileResult {
+abstract class CompilationResult {
   protected val runtime = java.lang.Runtime.getRuntime
 
   protected def process : java.lang.Process
@@ -25,7 +25,7 @@ abstract class CompileResult {
 }
 
 trait Compilation {
-  def doProcessCompile(streams:TaskStreams, baseDirectory:File, destinationDirectory:File, sources:Seq[File], filetype:String, targetExtension:String, compile:(PathInformation)=>CompileResult, targetIsDirectory:Boolean = false) = {
+  def doProcessCompile(streams:TaskStreams, baseDirectory:File, destinationDirectory:File, sources:Seq[File], filetype:String, targetExtension:String, compile:(PathInformation)=>CompilationResult, targetIsDirectory:Boolean = false) = {
     def outdated_?(source:File) = {
       val target = destinationDirectory / (source.base + "." + targetExtension)
 

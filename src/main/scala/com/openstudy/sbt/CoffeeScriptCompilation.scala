@@ -13,7 +13,7 @@ trait CoffeeScriptCompilation extends Compilation {
   val compileCoffeeScript = TaskKey[Unit]("compile-coffee-script")
 
   // The result of a CoffeeScript compile.
-  class CsCompileResult(info:PathInformation) extends CompileResult {
+  class CoffeeScriptCompilationResult(info:PathInformation) extends CompilationResult {
     protected lazy val process = runtime.exec(
       ("coffee" :: "-o" :: info.target ::
                   "-c" :: info.source :: Nil).toArray,
@@ -31,6 +31,6 @@ trait CoffeeScriptCompilation extends Compilation {
   }
 
   def doCoffeeScriptCompile(streams:TaskStreams, baseDirectory:File, compiledCsDir:File, csSources:Seq[File]) = {
-    doProcessCompile(streams, baseDirectory, compiledCsDir, csSources, "CoffeeScript", "js", new CsCompileResult(_), targetIsDirectory = true)
+    doProcessCompile(streams, baseDirectory, compiledCsDir, csSources, "CoffeeScript", "js", new CoffeeScriptCompilationResult(_), targetIsDirectory = true)
   }
 }
