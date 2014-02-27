@@ -36,6 +36,11 @@ libraryDependencies += "net.java.dev.jets3t" % "jets3t" % "0.8.1"
 
 libraryDependencies += "com.yahoo.platform.yui" % "yuicompressor"  % "2.4.7"
 
+libraryDependencies += "org.scalatest" % "scalatest_2.10" % "2.0" % "test"
+
+libraryDependencies += "org.mockito" % "mockito-core" % "1.9.5" % "test"
+
+
 scalacOptions += "-deprecation"
 
 publishTo <<= version { (v: String) =>
