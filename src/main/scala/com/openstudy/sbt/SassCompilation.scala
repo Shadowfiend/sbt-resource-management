@@ -1,6 +1,8 @@
 package com.openstudy
 package sbt
 
+import java.lang.Runtime
+
 import scala.collection.JavaConversions._
 import java.io._
 
@@ -11,15 +13,17 @@ trait SassCompilation extends Compilation {
   val forceSassCompile = SettingKey[Boolean]("force-sass-compile")
   val compileSass = TaskKey[Unit]("compile-sass")
 
-  def doSassCompile(streams:TaskStreams, baseDirectory: File, bucket:Option[String], force: Boolean) = {
+  def doSassCompile(streams:TaskStreams, baseDirectory: File, bucket:Option[String], force: Boolean): Unit =
+    doSassCompile(streams, baseDirectory, bucket, force, Runtime.getRuntime, System.getenv().toMap)
+
+  def doSassCompile(streams:TaskStreams, baseDirectory: File, bucket:Option[String], force: Boolean, runtime: Runtime, systemEnvironment: Map[String, String]): Unit = {
     streams.log.info("Compiling SASS files...")
 
-    val runtime = java.lang.Runtime.getRuntime
     val environment =
       if (bucket.isDefined)
-        System.getenv() + ("asset_domain" -> bucket)
+        systemEnvironment + ("asset_domain" -> bucket)
       else
-        System.getenv().toMap
+        systemEnvironment
 
     val compassCompileCommand = {
       val compassCompile =  ("compass" :: "compile" :: "-e" :: "production" :: Nil).toArray
