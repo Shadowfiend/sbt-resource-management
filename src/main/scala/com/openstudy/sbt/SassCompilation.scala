@@ -21,7 +21,7 @@ trait SassCompilation extends Compilation {
 
     val environment =
       if (bucket.isDefined)
-        systemEnvironment + ("asset_domain" -> bucket)
+        systemEnvironment + ("asset_domain" -> bucket.getOrElse(""))
       else
         systemEnvironment
 
