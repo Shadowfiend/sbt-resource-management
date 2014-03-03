@@ -13,10 +13,10 @@ trait SassCompilation extends Compilation {
   val forceSassCompile = SettingKey[Boolean]("force-sass-compile")
   val compileSass = TaskKey[Unit]("compile-sass")
 
-  def doSassCompile(streams:TaskStreams, baseDirectory: File, bucket:Option[String], force: Boolean): Unit =
-    doSassCompile(streams, baseDirectory, bucket, force, Runtime.getRuntime, System.getenv().toMap)
+  def runtime: java.lang.Runtime
+  def systemEnvironment: Map[String, String]
 
-  def doSassCompile(streams:TaskStreams, baseDirectory: File, bucket:Option[String], force: Boolean, runtime: Runtime, systemEnvironment: Map[String, String]): Unit = {
+  def doSassCompile(streams:TaskStreams, baseDirectory: File, bucket:Option[String], force: Boolean): Unit = {
     streams.log.info("Compiling SASS files...")
 
     val environment =

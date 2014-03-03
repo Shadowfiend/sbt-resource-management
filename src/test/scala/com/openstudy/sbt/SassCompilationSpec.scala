@@ -14,8 +14,6 @@ import _root_.sbt.{File => SbtFile, _}
 import Keys.{baseDirectory, resourceDirectory, streams, target, _}
 
 class SassCompilationSpec extends FunSpec with MockitoSugar {
-  val testSassCompilation = new SassCompilation {}
-
   describe("SassCompilation") {
     it("should execute the correct compass command with force off") {
       val mockTaskStreams = mock[TaskStreams]
@@ -23,17 +21,22 @@ class SassCompilationSpec extends FunSpec with MockitoSugar {
       val mockRuntime = mock[Runtime]
       val mockProcess = mock[java.lang.Process]
       val mockLogger = mock[Logger]
-      val enviroment: Map[String, String] = Map.empty
+      val environment: Map[String, String] = Map.empty
+
+      val testSassCompilation = new SassCompilation {
+        val runtime = mockRuntime
+        val systemEnvironment = environment
+      }
 
       when(mockTaskStreams.log).thenReturn(mockLogger)
       when(mockRuntime.exec(isA(classOf[Array[String]]), anyObject(), anyObject())).thenReturn(mockProcess)
       when(mockProcess.waitFor).thenReturn(0)
 
-      testSassCompilation.doSassCompile(mockTaskStreams, mockBaseDirectory, None, false, mockRuntime, enviroment)
+      testSassCompilation.doSassCompile(mockTaskStreams, mockBaseDirectory, None, false)
 
       verify(mockRuntime).exec(
         Array[String]("compass", "compile", "-e", "production"),
-        enviroment.map { case (key, value) => key + "=" + value }.toArray,
+        environment.map { case (key, value) => key + "=" + value }.toArray,
         mockBaseDirectory
       )
     }
@@ -44,17 +47,22 @@ class SassCompilationSpec extends FunSpec with MockitoSugar {
       val mockRuntime = mock[Runtime]
       val mockProcess = mock[java.lang.Process]
       val mockLogger = mock[Logger]
-      val enviroment: Map[String, String] = Map.empty
+      val environment: Map[String, String] = Map.empty
+
+      val testSassCompilation = new SassCompilation {
+        val runtime = mockRuntime
+        val systemEnvironment = environment
+      }
 
       when(mockTaskStreams.log).thenReturn(mockLogger)
       when(mockRuntime.exec(isA(classOf[Array[String]]), anyObject(), anyObject())).thenReturn(mockProcess)
       when(mockProcess.waitFor).thenReturn(0)
 
-      testSassCompilation.doSassCompile(mockTaskStreams, mockBaseDirectory, None, true, mockRuntime, enviroment)
+      testSassCompilation.doSassCompile(mockTaskStreams, mockBaseDirectory, None, true)
 
       verify(mockRuntime).exec(
         Array[String]("compass", "compile", "-e", "production", "--force"),
-        enviroment.map { case (key, value) => key + "=" + value }.toArray,
+        environment.map { case (key, value) => key + "=" + value }.toArray,
         mockBaseDirectory
       )
     }
@@ -65,17 +73,22 @@ class SassCompilationSpec extends FunSpec with MockitoSugar {
       val mockRuntime = mock[Runtime]
       val mockProcess = mock[java.lang.Process]
       val mockLogger = mock[Logger]
-      val enviroment: Map[String, String] = Map("asset_domain" -> "bacon")
+      val environment: Map[String, String] = Map("asset_domain" -> "bacon")
+
+      val testSassCompilation = new SassCompilation {
+        val runtime = mockRuntime
+        val systemEnvironment = environment
+      }
 
       when(mockTaskStreams.log).thenReturn(mockLogger)
       when(mockRuntime.exec(isA(classOf[Array[String]]), anyObject(), anyObject())).thenReturn(mockProcess)
       when(mockProcess.waitFor).thenReturn(0)
 
-      testSassCompilation.doSassCompile(mockTaskStreams, mockBaseDirectory, Some("bacon"), true, mockRuntime, enviroment)
+      testSassCompilation.doSassCompile(mockTaskStreams, mockBaseDirectory, Some("bacon"), true)
 
       verify(mockRuntime).exec(
         Array[String]("compass", "compile", "-e", "production", "--force"),
-        enviroment.map { case (key, value) => key + "=" + value }.toArray,
+        environment.map { case (key, value) => key + "=" + value }.toArray,
         mockBaseDirectory
       )
     }
@@ -86,14 +99,19 @@ class SassCompilationSpec extends FunSpec with MockitoSugar {
       val mockRuntime = mock[Runtime]
       val mockProcess = mock[java.lang.Process]
       val mockLogger = mock[Logger]
-      val enviroment: Map[String, String] = Map("asset_domain" -> "bacon")
+      val environment: Map[String, String] = Map("asset_domain" -> "bacon")
+
+      val testSassCompilation = new SassCompilation {
+        val runtime = mockRuntime
+        val systemEnvironment = environment
+      }
 
       when(mockTaskStreams.log).thenReturn(mockLogger)
       when(mockRuntime.exec(isA(classOf[Array[String]]), anyObject(), anyObject())).thenReturn(mockProcess)
       when(mockProcess.waitFor).thenReturn(1)
 
       intercept[RuntimeException] {
-        testSassCompilation.doSassCompile(mockTaskStreams, mockBaseDirectory, Some("bacon"), true, mockRuntime, enviroment)
+        testSassCompilation.doSassCompile(mockTaskStreams, mockBaseDirectory, Some("bacon"), true)
       }
     }
   }
