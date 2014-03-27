@@ -8,14 +8,27 @@ import com.amazonaws.services.s3._
   import model._
 
 trait S3 {
-  def accessKey: String
-  def secretKey: String
+  def accessKey: Option[String]
+  def secretKey: Option[String]
 
-  lazy val credentials = new BasicAWSCredentials(accessKey, secretKey)
+  lazy val credentials = {
+    for {
+      accessKey <- accessKey
+      secretKey <- secretKey
+    } yield {
+      new BasicAWSCredentials(accessKey, secretKey)
+    }
+  }
 
-  lazy val s3 = new AmazonS3Client(credentials)
+  lazy val s3 = {
+    credentials.map { s3Credentials =>
+      new AmazonS3Client(s3Credentials)
+    } getOrElse {
+      new AmazonS3Client
+    }
+  }
 }
-class S3Handler(val accessKey: String, val secretKey: String, bucket: String) extends S3 {
+class S3Handler(bucket: String, val accessKey: Option[String], val secretKey: Option[String]) extends S3 {
   lazy val bucketAcl = {
     val acl = new AccessControlList
     acl.grantPermission(GroupGrantee.AllUsers, Permission.Read)
