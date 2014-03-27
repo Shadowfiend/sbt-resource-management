@@ -40,6 +40,7 @@ class S3Handler(bucket: String, val accessKey: Option[String], val secretKey: Op
   def saveFile(mime: String, fileName: String, data: Array[Byte]): String = {
     val metadata = new ObjectMetadata
     metadata.setContentType(mime)
+    metadata.setContentLength(data.length)
 
     val dataStream = new ByteArrayInputStream(data)
     val request =
