@@ -32,7 +32,7 @@ pomExtra :=
   </developer>
 </developers>
 
-libraryDependencies += "net.java.dev.jets3t" % "jets3t" % "0.8.1"
+libraryDependencies += "com.amazonaws" % "aws-java-sdk" % "1.7.5"
 
 libraryDependencies += "com.yahoo.platform.yui" % "yuicompressor"  % "2.4.7"
 
