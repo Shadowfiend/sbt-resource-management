@@ -17,7 +17,7 @@ trait CssDeployment extends Deployment {
       access: Option[String], secret: Option[String], defaultBucket: Option[String]) = {
     val bundles = (compressedTarget / "stylesheets" ** "*.css").get
 
-    withAwsConfiguration(streams, defaultBucket, access, secret) { (defaultBucket, access, secret) =>
+    withAwsConfiguration(streams, access, secret, defaultBucket) { (defaultBucket, access, secret) =>
       withBucketMapping(bundles, defaultBucket, customBucketMap) { (bucketName, files) =>
         doDeploy(
           streams,
