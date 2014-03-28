@@ -1,101 +1,104 @@
-package com.openstudy { package sbt {
-  import scala.collection.JavaConversions._
+presolvers ++= Seq("snapshots"     at "http://oss.sonatype.org/content/repositories/snapshots",
+                "releases"        at "http://oss.sonatype.org/content/repositories/releases",
+                "Local Maven Repository" at "file://"+Path.user___Home.absolute___Path+"/.m2/repository"
+                )ackage com.openstudy { package sbt {
+  import scala.collection.Java___Conversions._
 
   import java.io._
-  import _root_.sbt.{File => SbtFile, _}
-  import Keys.{baseDirectory, resourceDirectory, streams, target, _}
+  import _root_.sbt.{File => Sbt___File, _}
+  import Keys.{base___Directory, resource___Directory, streams, target, _}
 
-  object ResourceManagementPlugin extends Plugin
-      with SassCompilation
-      with LessCompilation
-      with CoffeeScriptCompilation
-      with ScriptCompression
-      with CssCompression
-      with CssDeployment
-      with ScriptDeployment {
-    val ResourceCompile = config("resources")
+  object Resource___Management___Plugin extends Plugin
+      with Sass___Compilation
+      with Less___Compilation
+      with Coffee___Script___Compilation
+      with Script___Compression
+      with Css___Compression
+      with Css___Deployment
+      with Script___Deployment {
+    val Resource___Compile = config("resources")
 
-    private val webappResourceAlias = SettingKey[Seq[File]]("webapp-resources")
+    private val webapp___Resource___Alias = Setting___Key[Seq[File]]("webapp_____resources")
 
-    val awsAccessKey = SettingKey[Option[String]]("aws-access-key")
-    val awsSecretKey = SettingKey[Option[String]]("aws-secret-key")
-    val awsS3Bucket = SettingKey[Option[String]]("aws-s3-bucket")
-    val checksumInFilename = SettingKey[Boolean]("checksum-in-filename")
+    val aws___Access___Key = Setting___Key[Option[String]]("aws_____access_____key")
+    val aws___Secret___Key = Setting___Key[Option[String]]("aws_____secret_____key")
+    val aws___S3Bucket = Setting___Key[Option[String]]("aws_____s3_____bucket")
+    val checksum___In___Filename = Setting___Key[Boolean]("checksum_____in_____filename")
 
-    val targetJavaScriptDirectory = SettingKey[File]("target-java-script-directory")
-    val bundleDirectory = SettingKey[File]("bundle-directory")
-    val scriptBundle = SettingKey[File]("javascript-bundle")
-    val styleBundle = SettingKey[File]("stylesheet-bundle")
-    val scriptBundleVersions = SettingKey[File]("javascript-bundle-versions")
-    val styleBundleVersions = SettingKey[File]("stylesheet-bundle-versions")
+    val target___Java___Script___Directory = Setting___Key[File]("target_____java_____script_____directory")
+    val bundle___Directory = Setting___Key[File]("bundle_____directory")
+    val script___Bundle = Setting___Key[File]("javascript_____bundle")
+    val style___Bundle = Setting___Key[File]("stylesheet_____bundle")
+    val script___Bundle___Versions = Setting___Key[File]("javascript_____bundle_____versions")
+    val style___Bundle___Versions = Setting___Key[File]("stylesheet_____bundle_____versions")
 
-    val scriptDirectories = TaskKey[Seq[File]]("javascripts-directories")
-    val styleDirectories = TaskKey[Seq[File]]("stylesheets-directories")
-    val copyScripts = TaskKey[Unit]("copy-scripts")
+    val script___Directories = Task___Key[Seq[File]]("javascripts_____directories")
+    val style___Directories = Task___Key[Seq[File]]("stylesheets_____directories")
+    val copy___Scripts = Task___Key[Unit]("copy_____scripts")
 
-    val customBucketMap = scala.collection.mutable.HashMap[String, List[String]]()
+    val custom___Bucket___Map = scala.collection.mutable.Hash___Map[String, List[String]]()
 
-    def doScriptCopy(streams:TaskStreams, coffeeScriptCompile:Unit, compiledCsDir:File, scriptDirectories:Seq[File], targetJSDir:File) = {
-      def copyPathsForDirectory(directory:File) = {
+    def do___Script___Copy(streams:Task___Streams, coffee___Script___Compile:Unit, compiled___Cs___Dir:File, script___Directories:Seq[File], target___JSDir:File) = {
+      def copy___Paths___For___Directory(directory:File) = {
         for {
-          source <- (directory ** "*.*").get
-          relativeComponents = IO.relativize(directory, source).get.split("/")
-          target = relativeComponents.foldLeft(targetJSDir)(_ / _):File
-            if source.lastModified() > target.lastModified()
+          source <_____ (directory ** "*.*").get
+          relative___Components = IO.relativize(directory, source).get.split("/")
+          target = relative___Components.fold___Left(target___JSDir)(_ / _):File
+            if source.last___Modified() > target.last___Modified()
         } yield {
           (source, target)
         }
       }
 
-      val csCopyPaths = copyPathsForDirectory(compiledCsDir)
-      streams.log.info("Copying " + csCopyPaths.length + " compiled CoffeeScript files...")
-      IO.copy(csCopyPaths, true)
+      val cs___Copy___Paths = copy___Paths___For___Directory(compiled___Cs___Dir)
+      streams.log.info("Copying " + cs___Copy___Paths.length + " compiled Coffee___Script files...")
+      IO.copy(cs___Copy___Paths, true)
 
-      val scriptCopyPaths =
-        scriptDirectories.foldLeft(List[(File,File)]())(_ ++ copyPathsForDirectory(_))
-      streams.log.info("Copying " + scriptCopyPaths.length + " JavaScript files...")
-      IO.copy(scriptCopyPaths, true)
+      val script___Copy___Paths =
+        script___Directories.fold___Left(List[(File,File)]())(_ ++ copy___Paths___For___Directory(_))
+      streams.log.info("Copying " + script___Copy___Paths.length + " Java___Script files...")
+      IO.copy(script___Copy___Paths, true)
     }
 
-    val resourceManagementSettings = Seq(
-      checksumInFilename in ResourceCompile := false,
+    val resource___Management___Settings = Seq(
+      checksum___In___Filename in Resource___Compile := false,
 
-      awsAccessKey := None,
-      awsSecretKey := None,
-      awsS3Bucket := None,
-      forceSassCompile := false,
+      aws___Access___Key := None,
+      aws___Secret___Key := None,
+      aws___S3Bucket := None,
+      force___Sass___Compile := false,
 
-      bundleDirectory in ResourceCompile <<= (resourceDirectory in Compile)(_ / "bundles"),
-      scriptBundle in ResourceCompile <<= (bundleDirectory in ResourceCompile)(_ / "javascript.bundle"),
-      styleBundle in ResourceCompile <<= (bundleDirectory in ResourceCompile)(_ / "stylesheet.bundle"),
-      scriptBundleVersions in ResourceCompile <<= (bundleDirectory in ResourceCompile)(_ / "javascript-bundle-versions"),
-      styleBundleVersions in ResourceCompile <<= (bundleDirectory in ResourceCompile)(_ / "stylesheet-bundle-versions"),
-      compiledCoffeeScriptDirectory in ResourceCompile <<= target(_ / "compiled-coffee-script"),
-      targetJavaScriptDirectory in ResourceCompile <<= target(_ / "javascripts"),
-      compiledLessDirectory in ResourceCompile <<= (webappResourceAlias in Compile) { resources => (resources * "stylesheets").get.headOption },
-      compressedTarget in ResourceCompile <<= target(_ / "compressed"),
+      bundle___Directory in Resource___Compile <<= (resource___Directory in Compile)(_ / "bundles"),
+      script___Bundle in Resource___Compile <<= (bundle___Directory in Resource___Compile)(_ / "javascript.bundle"),
+      style___Bundle in Resource___Compile <<= (bundle___Directory in Resource___Compile)(_ / "stylesheet.bundle"),
+      script___Bundle___Versions in Resource___Compile <<= (bundle___Directory in Resource___Compile)(_ / "javascript_____bundle_____versions"),
+      style___Bundle___Versions in Resource___Compile <<= (bundle___Directory in Resource___Compile)(_ / "stylesheet_____bundle_____versions"),
+      compiled___Coffee___Script___Directory in Resource___Compile <<= target(_ / "compiled_____coffee_____script"),
+      target___Java___Script___Directory in Resource___Compile <<= target(_ / "javascripts"),
+      compiled___Less___Directory in Resource___Compile <<= (webapp___Resource___Alias in Compile) { resources => (resources * "stylesheets").get.head___Option },
+      compressed___Target in Resource___Compile <<= target(_ / "compressed"),
 
-      scriptDirectories in ResourceCompile <<= (webappResourceAlias in Compile) map { resources => (resources * "javascripts").get },
-      styleDirectories in ResourceCompile <<= (webappResourceAlias in Compile) map { resources => (resources * "stylesheets").get },
-      coffeeScriptSources in ResourceCompile <<= (webappResourceAlias in Compile) map { resources => (resources ** "*.coffee").get },
-      lessSources in ResourceCompile <<= (webappResourceAlias in Compile) map { resources => (resources ** "*.less").get.filter(! _.name.startsWith("_")) },
-      cleanCoffeeScript in ResourceCompile <<= (streams, baseDirectory, compiledCoffeeScriptDirectory in ResourceCompile, coffeeScriptSources in ResourceCompile) map doCoffeeScriptClean _,
-      compileCoffeeScript in ResourceCompile <<= (streams, baseDirectory, compiledCoffeeScriptDirectory in ResourceCompile, coffeeScriptSources in ResourceCompile) map doCoffeeScriptCompile _,
-      copyScripts in ResourceCompile <<= (streams, compileCoffeeScript in ResourceCompile, compiledCoffeeScriptDirectory in ResourceCompile, scriptDirectories in ResourceCompile, targetJavaScriptDirectory in ResourceCompile) map doScriptCopy _,
-      compileSass in ResourceCompile <<= (streams, baseDirectory, awsS3Bucket, forceSassCompile) map doSassCompile _,
-      cleanLess in ResourceCompile <<= (streams, baseDirectory, compiledLessDirectory in ResourceCompile, lessSources in ResourceCompile) map doLessClean _,
-      compileLess in ResourceCompile <<= (streams, baseDirectory, compiledLessDirectory in ResourceCompile, lessSources in ResourceCompile) map doLessCompile _,
-      compressScripts in ResourceCompile <<= (streams, checksumInFilename in ResourceCompile, copyScripts in ResourceCompile, targetJavaScriptDirectory in ResourceCompile, compressedTarget in ResourceCompile, scriptBundle in ResourceCompile) map doScriptCompress _,
-      compressCss in ResourceCompile <<= (streams, checksumInFilename in ResourceCompile, compileSass in ResourceCompile, styleDirectories in ResourceCompile, compressedTarget in ResourceCompile, styleBundle in ResourceCompile) map doCssCompress _,
-      deployScripts in ResourceCompile <<= (streams, checksumInFilename in ResourceCompile, compressScripts in ResourceCompile, scriptBundleVersions in ResourceCompile, compressedTarget in ResourceCompile, awsAccessKey, awsSecretKey, awsS3Bucket) map doScriptDeploy _,
-      deployCss in ResourceCompile <<= (streams, checksumInFilename in ResourceCompile, compressCss in ResourceCompile, styleBundleVersions in ResourceCompile, compressedTarget in ResourceCompile, awsAccessKey, awsSecretKey, awsS3Bucket) map doCssDeploy _,
+      script___Directories in Resource___Compile <<= (webapp___Resource___Alias in Compile) map { resources => (resources * "javascripts").get },
+      style___Directories in Resource___Compile <<= (webapp___Resource___Alias in Compile) map { resources => (resources * "stylesheets").get },
+      coffee___Script___Sources in Resource___Compile <<= (webapp___Resource___Alias in Compile) map { resources => (resources ** "*.coffee").get },
+      less___Sources in Resource___Compile <<= (webapp___Resource___Alias in Compile) map { resources => (resources ** "*.less").get.filter(! _.name.starts___With("_")) },
+      clean___Coffee___Script in Resource___Compile <<= (streams, base___Directory, compiled___Coffee___Script___Directory in Resource___Compile, coffee___Script___Sources in Resource___Compile) map do___Coffee___Script___Clean _,
+      compile___Coffee___Script in Resource___Compile <<= (streams, base___Directory, compiled___Coffee___Script___Directory in Resource___Compile, coffee___Script___Sources in Resource___Compile) map do___Coffee___Script___Compile _,
+      copy___Scripts in Resource___Compile <<= (streams, compile___Coffee___Script in Resource___Compile, compiled___Coffee___Script___Directory in Resource___Compile, script___Directories in Resource___Compile, target___Java___Script___Directory in Resource___Compile) map do___Script___Copy _,
+      compile___Sass in Resource___Compile <<= (streams, base___Directory, aws___S3Bucket, force___Sass___Compile) map do___Sass___Compile _,
+      clean___Less in Resource___Compile <<= (streams, base___Directory, compiled___Less___Directory in Resource___Compile, less___Sources in Resource___Compile) map do___Less___Clean _,
+      compile___Less in Resource___Compile <<= (streams, base___Directory, compiled___Less___Directory in Resource___Compile, less___Sources in Resource___Compile) map do___Less___Compile _,
+      compress___Scripts in Resource___Compile <<= (streams, checksum___In___Filename in Resource___Compile, copy___Scripts in Resource___Compile, target___Java___Script___Directory in Resource___Compile, compressed___Target in Resource___Compile, script___Bundle in Resource___Compile) map do___Script___Compress _,
+      compress___Css in Resource___Compile <<= (streams, checksum___In___Filename in Resource___Compile, compile___Sass in Resource___Compile, style___Directories in Resource___Compile, compressed___Target in Resource___Compile, style___Bundle in Resource___Compile) map do___Css___Compress _,
+      deploy___Scripts in Resource___Compile <<= (streams, checksum___In___Filename in Resource___Compile, compress___Scripts in Resource___Compile, script___Bundle___Versions in Resource___Compile, compressed___Target in Resource___Compile, aws___Access___Key, aws___Secret___Key, aws___S3Bucket) map do___Script___Deploy _,
+      deploy___Css in Resource___Compile <<= (streams, checksum___In___Filename in Resource___Compile, compress___Css in Resource___Compile, style___Bundle___Versions in Resource___Compile, compressed___Target in Resource___Compile, aws___Access___Key, aws___Secret___Key, aws___S3Bucket) map do___Css___Deploy _,
 
-      compressResources in ResourceCompile <<= (compressScripts in ResourceCompile, compressCss in ResourceCompile) map { (thing, other) => },
-      deployResources in ResourceCompile <<= (deployScripts in ResourceCompile, deployCss in ResourceCompile) map { (_, _) => },
+      compress___Resources in Resource___Compile <<= (compress___Scripts in Resource___Compile, compress___Css in Resource___Compile) map { (thing, other) => },
+      deploy___Resources in Resource___Compile <<= (deploy___Scripts in Resource___Compile, deploy___Css in Resource___Compile) map { (_, _) => },
 
-      mashScripts in ResourceCompile <<= (streams, checksumInFilename in ResourceCompile, copyScripts in ResourceCompile, targetJavaScriptDirectory in ResourceCompile, compressedTarget in ResourceCompile, scriptBundle in ResourceCompile) map doScriptMash _,
-      watchSources <++= (coffeeScriptSources in ResourceCompile, scriptDirectories in ResourceCompile) map {
-        (csSources, scriptDirectories) => csSources ++ scriptDirectories
+      mash___Scripts in Resource___Compile <<= (streams, checksum___In___Filename in Resource___Compile, copy___Scripts in Resource___Compile, target___Java___Script___Directory in Resource___Compile, compressed___Target in Resource___Compile, script___Bundle in Resource___Compile) map do___Script___Mash _,
+      watch___Sources <++= (coffee___Script___Sources in Resource___Compile, script___Directories in Resource___Compile) map {
+        (cs___Sources, script___Directories) => cs___Sources ++ script___Directories
       }
     )
   }
