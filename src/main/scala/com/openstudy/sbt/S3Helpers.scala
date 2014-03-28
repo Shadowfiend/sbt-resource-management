@@ -1,7 +1,8 @@
 package com.openstudy
 package sbt
 
-import java.io.ByteArrayInputStream
+import java.io._
+import java.util.zip.GZIPOutputStream
 
 import com.amazonaws.auth._
 import com.amazonaws.services.s3._
@@ -38,11 +39,27 @@ class S3Handler(bucket: String, val accessKey: Option[String], val secretKey: Op
 
   // Returns the MD5 checksum of the file.
   def saveFile(mime: String, fileName: String, data: Array[Byte], gzipped: Boolean): String = {
+    val finalData =
+      if (gzipped) {
+        val dataOutputStream = new ByteArrayOutputStream
+        val gzipOutputStream = new GZIPOutputStream(dataOutputStream)
+
+        gzipOutputStream.write(data, 0, data.length)
+        gzipOutputStream.close
+
+        dataOutputStream.toByteArray
+      } else {
+        data
+      }
+
     val metadata = new ObjectMetadata
     metadata.setContentType(mime)
-    metadata.setContentLength(data.length)
+    metadata.setContentLength(finalData.length)
+    if (gzipped) {
+      metadata.setContentEncoding("gzip")
+    }
 
-    val dataStream = new ByteArrayInputStream(data)
+    val dataStream = new ByteArrayInputStream(finalData)
     val request =
       new PutObjectRequest(bucket, fileName, dataStream, metadata)
         .withAccessControlList(bucketAcl)
