@@ -1,40 +1,54 @@
-package com.openstudy { package sbt {
-  import java.io._
+package com.openstudy
+package sbt
 
-  import org.jets3t.service._
-    import acl._
-    import impl.rest.httpclient._
-    import model._
-    import security._
-    import utils._
+import java.io.ByteArrayInputStream
 
-  trait S3 {
-    def accessKey : String
-    def secretKey : String
+import com.amazonaws.auth._
+import com.amazonaws.services.s3._
+  import model._
 
-    lazy val credentials =
-      new AWSCredentials(accessKey, secretKey)
-    lazy val s3 = new RestS3Service(credentials)
-  }
-  class S3Handler(val accessKey:String, val secretKey:String, bucket:String) extends S3 {
-    lazy val bucketAcl = {
-      val acl = s3.getBucketAcl(bucket);
-      acl.grantPermission(GroupGrantee.ALL_USERS, Permission.PERMISSION_READ);
+trait S3 {
+  def accessKey: Option[String]
+  def secretKey: Option[String]
 
-      acl
-    }
-
-    // Returns the MD5 checksum of the file.
-    def saveFile(mime:String, fileName:String, data:Array[Byte]) : String = {
-      val s3Object = new S3Object(fileName, data)
-      val hash = s3Object.getMd5HashAsHex
-
-      s3Object.setContentType(mime)
-      s3Object.setAcl(bucketAcl)
-
-      s3.putObject(bucket, s3Object)
-
-      hash
+  lazy val credentials = {
+    for {
+      accessKey <- accessKey
+      secretKey <- secretKey
+    } yield {
+      new BasicAWSCredentials(accessKey, secretKey)
     }
   }
-} }
+
+  lazy val s3 = {
+    credentials.map { s3Credentials =>
+      new AmazonS3Client(s3Credentials)
+    } getOrElse {
+      new AmazonS3Client
+    }
+  }
+}
+class S3Handler(bucket: String, val accessKey: Option[String], val secretKey: Option[String]) extends S3 {
+  lazy val bucketAcl = {
+    val acl = new AccessControlList
+    acl.grantPermission(GroupGrantee.AllUsers, Permission.Read)
+
+    acl
+  }
+
+  // Returns the MD5 checksum of the file.
+  def saveFile(mime: String, fileName: String, data: Array[Byte]): String = {
+    val metadata = new ObjectMetadata
+    metadata.setContentType(mime)
+    metadata.setContentLength(data.length)
+
+    val dataStream = new ByteArrayInputStream(data)
+    val request =
+      new PutObjectRequest(bucket, fileName, dataStream, metadata)
+        .withAccessControlList(bucketAcl)
+
+    val result = s3.putObject(request)
+
+    result.getContentMd5
+  }
+}

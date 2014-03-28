@@ -9,12 +9,23 @@ import Keys.{baseDirectory, resourceDirectory, streams, target, _}
 trait ScriptDeployment extends Deployment {
   val deployScripts = TaskKey[Unit]("deploy-scripts")
 
-  def doScriptDeploy(streams:TaskStreams, checksumInFilename:Boolean, bundleChecksums:Map[String,String], scriptBundleVersions:File, compressedTarget:File, access:Option[String], secret:Option[String], defaultBucket:Option[String]) = {
+  def doScriptDeploy(
+      streams: TaskStreams,
+      checksumInFilename: Boolean, bundleChecksums: Map[String,String],
+      scriptBundleVersions: File, compressedTarget: File,
+      access: Option[String], secret: Option[String], defaultBucket: Option[String]) = {
     val bundles = (compressedTarget / "javascripts" ** "*.js").get
 
-    withAwsConfiguration(streams, access, secret, defaultBucket) { (access, secret, defaultBucket) =>
+    withAwsConfiguration(streams, access, secret, defaultBucket) { (defaultBucket, access, secret) =>
       withBucketMapping(bundles, defaultBucket, customBucketMap) { (bucketName, files) =>
-        doDeploy(streams, checksumInFilename, bundleChecksums, scriptBundleVersions, compressedTarget, files, "text/javascript", access, secret, bucketName)
+        doDeploy(
+          streams,
+          checksumInFilename,
+          bundleChecksums,
+          scriptBundleVersions, compressedTarget,
+          files, "text/javascript",
+          bucketName, access, secret
+        )
       }
     }
   }

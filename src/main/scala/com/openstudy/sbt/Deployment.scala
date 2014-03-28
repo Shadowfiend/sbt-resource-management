@@ -11,9 +11,9 @@ trait Deployment {
 
   def customBucketMap: scala.collection.mutable.HashMap[String, List[String]]
 
-  def doDeploy(streams:TaskStreams, checksumInFilename:Boolean, bundleChecksums:Map[String,String], bundleVersions:File, baseCompressedTarget:File, files:Seq[File], mimeType:String, access:String, secret:String, bucket:String) = {
+  def doDeploy(streams:TaskStreams, checksumInFilename:Boolean, bundleChecksums:Map[String,String], bundleVersions:File, baseCompressedTarget:File, files:Seq[File], mimeType:String, bucket:String, access:Option[String], secret:Option[String]) = {
     try {
-      val handler = new S3Handler(access, secret, bucket)
+      val handler = new S3Handler(bucket, access, secret)
 
       IO.write(bundleVersions.asFile, "checksum-in-filename=" + checksumInFilename + "\n")
       for {
@@ -46,19 +46,14 @@ trait Deployment {
     }
   }
 
-  protected def withAwsConfiguration(streams: TaskStreams, access: Option[String], secret: Option[String], defaultBucket: Option[String])(deployHandler: (String,String,String)=>Unit) = {
-    val abort_? = access.isEmpty || secret.isEmpty || defaultBucket.isEmpty
-    if (access.isEmpty)
-      streams.log.error("To use AWS deployment, you must set awsAccessKey := Some(\"your AWS access key\") in your sbt build.")
-    if (secret.isEmpty)
-      streams.log.error("To use AWS deployment, you must set awsSecretKey := Some(\"your AWS secret key\") in your sbt build.")
-    if (defaultBucket.isEmpty)
+  protected def withAwsConfiguration(streams: TaskStreams, access: Option[String], secret: Option[String], defaultBucket: Option[String])(deployHandler: (String,Option[String],Option[String])=>Unit) = {
+    if (defaultBucket.isEmpty) {
       streams.log.error("To use AWS deployment, you must set awsS3Bucket := Some(\"your S3 bucket name\") in your sbt build.")
 
-    if (abort_?)
       throw new RuntimeException("Missing AWS info, aborting deploy. See previous errors for more information.")
-    else
-      deployHandler(access.get, secret.get, defaultBucket.get)
+    } else {
+      deployHandler(defaultBucket.get, access, secret)
+    }
   }
 
   protected def withBucketMapping(bundles:Seq[File], defaultBucket:String, customBucketMap:scala.collection.Map[String, List[String]])(deployHandler:(String, Seq[File])=>Unit) = {

@@ -37,6 +37,9 @@ following lines to set up S3 deployment.
 
     awsS3Bucket  := Some("YOUR_S3_BUCKET")
 
+If you are using IAM roles to authorize your deployment machine to deploy
+to the S3 bucket, you can leave off the access key and secret key.
+
 ## Defaults
 
 By default, the following directories/files are used; listed beside them are the
