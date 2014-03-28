@@ -37,7 +37,7 @@ class S3Handler(bucket: String, val accessKey: Option[String], val secretKey: Op
   }
 
   // Returns the MD5 checksum of the file.
-  def saveFile(mime: String, fileName: String, data: Array[Byte]): String = {
+  def saveFile(mime: String, fileName: String, data: Array[Byte], gzipped: Boolean): String = {
     val metadata = new ObjectMetadata
     metadata.setContentType(mime)
     metadata.setContentLength(data.length)

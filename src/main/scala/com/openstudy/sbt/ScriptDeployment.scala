@@ -11,7 +11,8 @@ trait ScriptDeployment extends Deployment {
 
   def doScriptDeploy(
       streams: TaskStreams,
-      checksumInFilename: Boolean, bundleChecksums: Map[String,String],
+      checksumInFilename: Boolean, gzipFiles: Boolean,
+      bundleChecksums: Map[String,String],
       scriptBundleVersions: File, compressedTarget: File,
       access: Option[String], secret: Option[String], defaultBucket: Option[String]) = {
     val bundles = (compressedTarget / "javascripts" ** "*.js").get
@@ -20,7 +21,7 @@ trait ScriptDeployment extends Deployment {
       withBucketMapping(bundles, defaultBucket, customBucketMap) { (bucketName, files) =>
         doDeploy(
           streams,
-          checksumInFilename,
+          checksumInFilename, gzipFiles,
           bundleChecksums,
           scriptBundleVersions, compressedTarget,
           files, "text/javascript",
