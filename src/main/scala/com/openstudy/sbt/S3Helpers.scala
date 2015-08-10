@@ -37,17 +37,21 @@ class S3Handler(bucket: String, val accessKey: Option[String], val secretKey: Op
     acl
   }
 
+  private def gzipData(data: Array[Byte]): Array[Byte] = {
+    val dataOutputStream = new ByteArrayOutputStream
+    val gzipOutputStream = new GZIPOutputStream(dataOutputStream)
+
+    gzipOutputStream.write(data, 0, data.length)
+    gzipOutputStream.close
+
+    dataOutputStream.toByteArray
+  }
+
   // Returns the MD5 checksum of the file.
   def saveFile(mime: String, fileName: String, data: Array[Byte], gzipped: Boolean): String = {
     val finalData =
       if (gzipped) {
-        val dataOutputStream = new ByteArrayOutputStream
-        val gzipOutputStream = new GZIPOutputStream(dataOutputStream)
-
-        gzipOutputStream.write(data, 0, data.length)
-        gzipOutputStream.close
-
-        dataOutputStream.toByteArray
+        gzipData(data)
       } else {
         data
       }
