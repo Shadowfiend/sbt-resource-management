@@ -21,7 +21,7 @@ package com.openstudy { package sbt {
     val awsSecretKey = SettingKey[Option[String]]("aws-secret-key")
     val awsS3Bucket = SettingKey[Option[String]]("aws-s3-bucket")
     val checksumInFilename = SettingKey[Boolean]("checksum-in-filename")
-    val gzipFiles = SettingKey[Boolean]("gzipFiles")
+    val gzipResources = SettingKey[Boolean]("gzipResources")
 
     val targetJavaScriptDirectory = SettingKey[File]("target-java-script-directory")
     val bundleDirectory = SettingKey[File]("bundle-directory")
@@ -65,7 +65,7 @@ package com.openstudy { package sbt {
       awsSecretKey := None,
       awsS3Bucket := None,
       forceSassCompile := false,
-      gzipFiles := false,
+      gzipResources := false,
 
       bundleDirectory in ResourceCompile <<= (resourceDirectory in Compile)(_ / "bundles"),
       scriptBundle in ResourceCompile <<= (bundleDirectory in ResourceCompile)(_ / "javascript.bundle"),
@@ -89,8 +89,8 @@ package com.openstudy { package sbt {
       compileLess in ResourceCompile <<= (streams, baseDirectory, compiledLessDirectory in ResourceCompile, lessSources in ResourceCompile) map doLessCompile _,
       compressScripts in ResourceCompile <<= (streams, checksumInFilename in ResourceCompile, copyScripts in ResourceCompile, targetJavaScriptDirectory in ResourceCompile, compressedTarget in ResourceCompile, scriptBundle in ResourceCompile) map doScriptCompress _,
       compressCss in ResourceCompile <<= (streams, checksumInFilename in ResourceCompile, compileSass in ResourceCompile, styleDirectories in ResourceCompile, compressedTarget in ResourceCompile, styleBundle in ResourceCompile) map doCssCompress _,
-      deployScripts in ResourceCompile <<= (streams, checksumInFilename in ResourceCompile, gzipFiles, compressScripts in ResourceCompile, scriptBundleVersions in ResourceCompile, compressedTarget in ResourceCompile, awsAccessKey, awsSecretKey, awsS3Bucket) map doScriptDeploy _,
-      deployCss in ResourceCompile <<= (streams, checksumInFilename in ResourceCompile, gzipFiles, compressCss in ResourceCompile, styleBundleVersions in ResourceCompile, compressedTarget in ResourceCompile, awsAccessKey, awsSecretKey, awsS3Bucket) map doCssDeploy _,
+      deployScripts in ResourceCompile <<= (streams, checksumInFilename in ResourceCompile, gzipResources, compressScripts in ResourceCompile, scriptBundleVersions in ResourceCompile, compressedTarget in ResourceCompile, awsAccessKey, awsSecretKey, awsS3Bucket) map doScriptDeploy _,
+      deployCss in ResourceCompile <<= (streams, checksumInFilename in ResourceCompile, gzipResources, compressCss in ResourceCompile, styleBundleVersions in ResourceCompile, compressedTarget in ResourceCompile, awsAccessKey, awsSecretKey, awsS3Bucket) map doCssDeploy _,
 
       compressResources in ResourceCompile <<= (compressScripts in ResourceCompile, compressCss in ResourceCompile) map { (thing, other) => },
       deployResources in ResourceCompile <<= (deployScripts in ResourceCompile, deployCss in ResourceCompile) map { (_, _) => },
