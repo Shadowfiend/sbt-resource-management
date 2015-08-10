@@ -207,6 +207,16 @@ specified S3 bucket with the specified bundles.
 Once again, there is a combination command,
 `resources:deploy-resources`, that runs both the deploy commands.
 
+## Gzipping
+
+By default, resources are stored in S3 in their original forms; however, you
+can request that they be gzipped and stored in S3 with a gzipped content
+encoding, so that they are served to the browser gzipped and the browser
+decompresses them automatically. To do this, simply enable the flag
+`gzipResources`:
+
+    gzipResources := true
+
 ## Checksums as part of the filename
 
 As noted by @[eltimn](https://github.com/eltimn) and

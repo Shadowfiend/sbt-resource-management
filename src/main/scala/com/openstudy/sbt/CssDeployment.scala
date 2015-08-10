@@ -11,7 +11,7 @@ trait CssDeployment extends Deployment {
 
   def doCssDeploy(
       streams: TaskStreams,
-      checksumInFilename: Boolean,
+      checksumInFilename: Boolean, gzipFiles: Boolean,
       bundleChecksums: Map[String,String],
       styleBundleVersions: File, compressedTarget: File,
       access: Option[String], secret: Option[String], defaultBucket: Option[String]) = {
@@ -21,7 +21,7 @@ trait CssDeployment extends Deployment {
       withBucketMapping(bundles, defaultBucket, customBucketMap) { (bucketName, files) =>
         doDeploy(
           streams,
-          checksumInFilename,
+          checksumInFilename, gzipFiles,
           bundleChecksums,
           styleBundleVersions, compressedTarget,
           files, "text/css",

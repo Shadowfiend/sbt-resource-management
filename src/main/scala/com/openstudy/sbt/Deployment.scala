@@ -11,7 +11,14 @@ trait Deployment {
 
   def customBucketMap: scala.collection.mutable.HashMap[String, List[String]]
 
-  def doDeploy(streams:TaskStreams, checksumInFilename:Boolean, bundleChecksums:Map[String,String], bundleVersions:File, baseCompressedTarget:File, files:Seq[File], mimeType:String, bucket:String, access:Option[String], secret:Option[String]) = {
+  def doDeploy(
+      streams: TaskStreams,
+      checksumInFilename: Boolean, gzipFiles: Boolean,
+      bundleChecksums: Map[String,String],
+      bundleVersions: File, baseCompressedTarget: File,
+      files: Seq[File],
+      mimeType: String,
+      bucket: String, access: Option[String], secret: Option[String]) = {
     try {
       val handler = new S3Handler(bucket, access, secret)
 
@@ -30,7 +37,7 @@ trait Deployment {
 
         try {
           val contents = IO.readBytes(file)
-          handler.saveFile(mimeType, relativePath, contents)
+          handler.saveFile(mimeType, relativePath, contents, gzipped = gzipFiles)
 
           IO.append(bundleVersions, bundle + "=" + checksum + "\n")
         } catch {
