@@ -6,7 +6,7 @@ organization := "com.openstudy"
 
 version := "0.5.0-SNAPSHOT"
 
-pomExtra :=
+pomExtra := {
 <url>http://github.com/Shadowfiend/sbt-resource-management</url>
 <licenses>
   <license>
@@ -31,6 +31,7 @@ pomExtra :=
     <email>matt@frmr.me</email>
   </developer>
 </developers>
+}
 
 libraryDependencies += "com.amazonaws" % "aws-java-sdk" % "1.7.5"
 
