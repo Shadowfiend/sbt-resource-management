@@ -37,7 +37,7 @@ libraryDependencies += "com.amazonaws" % "aws-java-sdk" % "1.7.5"
 
 libraryDependencies += "com.yahoo.platform.yui" % "yuicompressor"  % "2.4.7"
 
-libraryDependencies += "org.scalatest" % "scalatest_2.10" % "2.0" % "test"
+libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.4" % "test"
 
 libraryDependencies += "org.mockito" % "mockito-core" % "1.9.5" % "test"
 
