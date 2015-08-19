@@ -1,6 +1,7 @@
 package com.openstudy { package sbt {
   import scala.collection.JavaConversions._
 
+  import java.lang.Runtime
   import java.io._
   import _root_.sbt.{File => SbtFile, _}
   import Keys.{baseDirectory, resourceDirectory, streams, target, _}
@@ -13,6 +14,8 @@ package com.openstudy { package sbt {
       with CssCompression
       with CssDeployment
       with ScriptDeployment {
+    val runtime = Runtime.getRuntime
+    def systemEnvironment = System.getenv().toMap
     val ResourceCompile = config("resources")
 
     private val webappResourceAlias = SettingKey[Seq[File]]("webapp-resources")
