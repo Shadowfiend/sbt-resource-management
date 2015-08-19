@@ -37,6 +37,9 @@ following lines to set up S3 deployment.
 
     awsS3Bucket  := Some("YOUR_S3_BUCKET")
 
+If you are using IAM roles to authorize your deployment machine to deploy
+to the S3 bucket, you can leave off the access key and secret key.
+
 ## Defaults
 
 By default, the following directories/files are used; listed beside them are the
@@ -203,6 +206,16 @@ specified S3 bucket with the specified bundles.
 
 Once again, there is a combination command,
 `resources:deploy-resources`, that runs both the deploy commands.
+
+## Gzipping
+
+By default, resources are stored in S3 in their original forms; however, you
+can request that they be gzipped and stored in S3 with a gzipped content
+encoding, so that they are served to the browser gzipped and the browser
+decompresses them automatically. To do this, simply enable the flag
+`gzipResources`:
+
+    gzipResources := true
 
 ## Checksums as part of the filename
 

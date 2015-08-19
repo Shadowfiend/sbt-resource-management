@@ -4,9 +4,9 @@ name := "sbt-resource-management"
 
 organization := "com.openstudy"
 
-version := "0.4.3-SNAPSHOT"
+version := "0.5.0-SNAPSHOT"
 
-pomExtra :=
+pomExtra := {
 <url>http://github.com/Shadowfiend/sbt-resource-management</url>
 <licenses>
   <license>
@@ -31,8 +31,9 @@ pomExtra :=
     <email>matt@frmr.me</email>
   </developer>
 </developers>
+}
 
-libraryDependencies += "net.java.dev.jets3t" % "jets3t" % "0.8.1"
+libraryDependencies += "com.amazonaws" % "aws-java-sdk" % "1.7.5"
 
 libraryDependencies += "com.yahoo.platform.yui" % "yuicompressor"  % "2.4.7"
 
