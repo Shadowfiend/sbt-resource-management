@@ -68,6 +68,7 @@ package com.openstudy { package sbt {
       awsSecretKey := None,
       awsS3Bucket := None,
       forceSassCompile := false,
+      productionSassCompile := false,
       gzipResources := false,
 
       bundleDirectory in ResourceCompile <<= (resourceDirectory in Compile)(_ / "bundles"),
@@ -87,7 +88,7 @@ package com.openstudy { package sbt {
       cleanCoffeeScript in ResourceCompile <<= (streams, baseDirectory, compiledCoffeeScriptDirectory in ResourceCompile, coffeeScriptSources in ResourceCompile) map doCoffeeScriptClean _,
       compileCoffeeScript in ResourceCompile <<= (streams, baseDirectory, compiledCoffeeScriptDirectory in ResourceCompile, coffeeScriptSources in ResourceCompile) map doCoffeeScriptCompile _,
       copyScripts in ResourceCompile <<= (streams, compileCoffeeScript in ResourceCompile, compiledCoffeeScriptDirectory in ResourceCompile, scriptDirectories in ResourceCompile, targetJavaScriptDirectory in ResourceCompile) map doScriptCopy _,
-      compileSass in ResourceCompile <<= (streams, baseDirectory, awsS3Bucket, forceSassCompile) map doSassCompile _,
+      compileSass in ResourceCompile <<= (streams, baseDirectory, awsS3Bucket, forceSassCompile, productionSassCompile) map doSassCompile _,
       cleanLess in ResourceCompile <<= (streams, baseDirectory, compiledLessDirectory in ResourceCompile, lessSources in ResourceCompile) map doLessClean _,
       compileLess in ResourceCompile <<= (streams, baseDirectory, compiledLessDirectory in ResourceCompile, lessSources in ResourceCompile) map doLessCompile _,
       compressScripts in ResourceCompile <<= (streams, checksumInFilename in ResourceCompile, copyScripts in ResourceCompile, targetJavaScriptDirectory in ResourceCompile, compressedTarget in ResourceCompile, scriptBundle in ResourceCompile) map doScriptCompress _,
