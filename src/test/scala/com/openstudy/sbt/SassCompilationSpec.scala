@@ -37,7 +37,8 @@ class SassCompilationSpec extends FunSpec with MockitoSugar {
           mockTaskStreams,
           mockBaseDirectory,
           bucket = None,
-          force = false
+          force = false,
+          production = true
         )
 
         verify(mockRuntime).exec(
@@ -68,11 +69,44 @@ class SassCompilationSpec extends FunSpec with MockitoSugar {
           mockTaskStreams,
           mockBaseDirectory,
           bucket = None,
-          force = true
+          force = true,
+          production = true
         )
 
         verify(mockRuntime).exec(
           Array[String]("compass", "compile", "-e", "production", "--force"),
+          environment.map { case (key, value) => key + "=" + value }.toArray,
+          mockBaseDirectory
+        )
+      }
+
+      it("with production off") {
+        val mockTaskStreams = mock[TaskStreams]
+        val mockBaseDirectory = mock[File]
+        val mockRuntime = mock[Runtime]
+        val mockProcess = mock[java.lang.Process]
+        val mockLogger = mock[Logger]
+        val environment: Map[String, String] = Map("bacon" -> "wakka", "apple" -> "2")
+
+        val testSassCompilation = new SassCompilation {
+          val runtime = mockRuntime
+          val systemEnvironment = environment
+        }
+
+        when(mockTaskStreams.log).thenReturn(mockLogger)
+        when(mockRuntime.exec(isA(classOf[Array[String]]), anyObject(), anyObject())).thenReturn(mockProcess)
+        when(mockProcess.waitFor).thenReturn(0)
+
+        testSassCompilation.doSassCompile(
+          mockTaskStreams,
+          mockBaseDirectory,
+          bucket = None,
+          force = false,
+          production = false
+        )
+
+        verify(mockRuntime).exec(
+          Array[String]("compass", "compile"),
           environment.map { case (key, value) => key + "=" + value }.toArray,
           mockBaseDirectory
         )
@@ -100,7 +134,8 @@ class SassCompilationSpec extends FunSpec with MockitoSugar {
         mockTaskStreams,
         mockBaseDirectory,
         bucket = Some("bacon"),
-        force = true
+        force = true,
+        production = true
       )
 
       verify(mockRuntime).exec(
@@ -132,7 +167,8 @@ class SassCompilationSpec extends FunSpec with MockitoSugar {
           mockTaskStreams,
           mockBaseDirectory,
           bucket = Some("bacon"),
-          true
+          force = true,
+          production = true
         )
       }
     }

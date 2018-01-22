@@ -11,14 +11,13 @@ import Keys.{baseDirectory, resourceDirectory, streams, target, _}
 
 trait SassCompilation extends Compilation {
   val forceSassCompile = SettingKey[Boolean]("force-sass-compile")
+  val productionSassCompile = SettingKey[Boolean]("production-sass-compile")
   val compileSass = TaskKey[Unit]("compile-sass")
 
   def runtime: java.lang.Runtime
   def systemEnvironment: Map[String, String]
 
-  def doSassCompile(streams:TaskStreams, baseDirectory: File, bucket:Option[String], force: Boolean): Unit = {
-    streams.log.info("Compiling SASS files...")
-
+  def doSassCompile(streams:TaskStreams, baseDirectory: File, bucket:Option[String], force: Boolean, production: Boolean): Unit = {
     val environment =
       if (bucket.isDefined)
         systemEnvironment + ("asset_domain" -> bucket.getOrElse(""))
@@ -26,13 +25,21 @@ trait SassCompilation extends Compilation {
         systemEnvironment
 
     val compassCompileCommand = {
-      val compassCompile =  ("compass" :: "compile" :: "-e" :: "production" :: Nil).toArray
-        
-      if (force) {
-        compassCompile :+ "--force"
-      } else {
-        compassCompile
+      var compassCompile =  ("compass" :: "compile" :: Nil).toArray
+
+      if (production) {
+        streams.log.debug("Production mode on")
+        compassCompile = compassCompile ++ ("-e" :: "production" :: Nil)
       }
+
+      if (force) {
+        streams.log.debug("Force mode on")
+        compassCompile = compassCompile :+ "--force"
+      }
+
+      streams.log.info(s"Compiling SASS files using: ${compassCompile.mkString(" ")}")
+
+      compassCompile
     }
 
     val process =
